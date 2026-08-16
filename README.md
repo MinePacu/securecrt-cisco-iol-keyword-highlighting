@@ -13,22 +13,71 @@
 
 - `PNET-Cisco-Dark.ini`: SecureCRT용 키워드 하이라이트 목록
 - `README.md`: 설정의 범위, 적용 시 주의사항 및 그룹/색상 설명
+- `Install-KeywordHighlight.ps1`: Windows용 자동 설치/제거 PowerShell 스크립트. SecureCRT 설정 폴더를 자동으로 탐색하고, `Keywords` 폴더에 ini를 백업/설치한 뒤 `Sessions\Default.ini`의 기본 세션 하이라이트 옵션을 갱신합니다. `-Uninstall`로 키워드 파일과 스크립트가 만든 최신 `Default.ini` 백업을 복원하며, `-WhatIf`를 지원합니다.
 
-현재 저장소에는 별도의 설치 스크립트나 라이선스 문서가 없습니다. 이 파일은 Cisco 장비에 명령을 실행하거나 설정을 변경하지 않으며, 터미널에 표시되는 텍스트의 시각적 강조만 담당합니다.
+현재 저장소에는 설치 스크립트(`Install-KeywordHighlight.ps1`)가 포함되어 있지만, 별도의 라이선스 문서는 없습니다. 이 저장소의 설정과 스크립트는 Cisco 장비에 명령을 실행하거나 장비 설정을 변경하지 않으며, 스크립트는 로컬 SecureCRT 설정 파일을 갱신합니다.
 
-## SecureCRT에서 가져오고 적용하기
+## SecureCRT에서 적용하기
 
-SecureCRT의 버전, 운영체제, 설정 저장 방식에 따라 메뉴 이름과 파일을 불러오는 위치가 다를 수 있습니다. 다음은 특정 버전에 종속되지 않는 일반적인 흐름입니다.
+설치 작업은 `Install-KeywordHighlight.ps1`을 한 번 실행하는 것으로 끝납니다. 이 실행이 `Keywords\PNET-Cisco-Dark.ini` 설치와 `Sessions\Default.ini`의 기본 세션 설정 적용을 함께 수행하므로, 설치 후 별도로 ini를 복사하거나 세션 옵션을 수동으로 입력할 필요가 없습니다.
 
-1. 적용 전에 현재 SecureCRT 세션/글로벌 설정을 백업합니다. 특히 기존 키워드 목록을 덮어쓰지 않도록 목록 이름과 설정 파일을 보관합니다.
-2. SecureCRT의 전역 옵션에서 설정 폴더 위치를 확인합니다. 일반적으로 `Options` 또는 `Global Options`의 설정 경로(Configuration Folder) 항목에서 확인할 수 있습니다.
-3. SecureCRT가 종료된 상태에서 설정 폴더의 `Keywords` 하위 폴더에 `PNET-Cisco-Dark.ini` 사본을 넣습니다. `Keywords` 폴더가 없을 때만 생성하고, 기존 파일을 덮어쓰기 전에 별도 백업을 보관합니다.
-4. 세션 옵션의 `Terminal` 아래 `Keyword Highlighting`과 유사한 화면에서 등록된 목록을 선택하고 키워드 하이라이트를 활성화합니다. 해당 버전에 `Import`/`Load` 기능이 있다면 그 기능으로 등록해도 됩니다.
-5. 테스트 장비나 저장된 CLI 출력으로 먼저 확인합니다. 예를 들어 `show interfaces`, `show spanning-tree`, `show etherchannel summary`, `show standby`, `show ip ospf neighbor` 등의 출력에서 의도한 항목이 보이는지 점검합니다.
+1. 적용 전에 SecureCRT를 종료하고 현재 세션/글로벌 설정을 백업합니다. 스크립트도 덮어쓰기 직전에 키워드 파일과 `Sessions\Default.ini`를 각각 timestamp 백업하지만, 별도 보관본을 추가로 준비하는 것이 좋습니다.
+2. SecureCRT의 전역 옵션에서 설정 폴더 위치를 확인합니다. 일반적으로 `Options` 또는 `Global Options`의 설정 경로(Configuration Folder) 항목에서 확인할 수 있습니다. 경로를 알고 있다면 아래 Windows 설치 명령의 `-ConfigPath`에 지정합니다.
+3. 아래 단일 설치 명령을 실행합니다. 설정 폴더 자동 탐색을 사용하려면 `-ConfigPath`를 생략할 수 있습니다.
+4. SecureCRT를 다시 시작하고 테스트 장비나 저장된 CLI 출력으로 실제 표시를 확인합니다. 예를 들어 `show interfaces`, `show spanning-tree`, `show etherchannel summary`, `show standby`, `show ip ospf neighbor` 등의 출력에서 의도한 항목이 보이는지 점검합니다.
 
-SecureCRT 설정 폴더와 `Keywords` 하위 폴더의 실제 위치는 버전·운영체제·프로필 구성에 따라 달라질 수 있습니다. 위의 절차는 일반적인 수동 등록 방법이며, 특정 OS의 절대 경로를 가정하지 않습니다. 자세한 경로 확인 및 수동 등록 예시는 [VanDyke의 키워드 INI 가져오기 안내](https://www.vandyke.com/support/scripting/scripting-examples/import-keyword-highlighting-ini-files.html)를 참고하십시오. 기존 설정 파일을 교체해야 하는 경우에는 SecureCRT를 종료하고 백업과 복원 절차를 먼저 준비하십시오.
+SecureCRT 설정 폴더와 `Keywords` 하위 폴더의 실제 위치는 버전·운영체제·프로필 구성에 따라 달라질 수 있습니다. `-ConfigPath`에는 `Sessions\Default.ini`가 들어 있는 설정 폴더를 지정하십시오. 설치 후 SecureCRT 메뉴에서 설정을 확인할 때 메뉴 명칭은 버전에 따라 다를 수 있습니다.
 
-> 참고: 위의 `Session Options`, `Global Options`, `Terminal`, `Keyword Highlighting`, `Import` 등의 메뉴 명칭은 SecureCRT 버전에 따라 다를 수 있습니다. 메뉴가 보이지 않는다면 해당 버전의 키워드 하이라이트/키워드 목록 설정 화면을 기준으로 찾으십시오.
+## Windows 자동 설치 스크립트
+
+`Install-KeywordHighlight.ps1`은 위 절차를 Windows 환경에서 자동화하는 PowerShell 스크립트입니다. 스크립트와 같은 폴더의 ini 파일 basename에서 키워드 세트 이름을 derive하므로, 현재 대상 이름은 `PNET-Cisco-Dark`입니다.
+
+사용 예시(키워드 파일과 `Default.ini`를 함께 설치):
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\Install-KeywordHighlight.ps1 -ConfigPath 'C:\Path\To\Config'
+```
+
+`-ConfigPath`를 생략하고 일반적인 SecureCRT 경로를 자동 탐색하게 하려면 다음과 같이 실행합니다.
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\Install-KeywordHighlight.ps1
+```
+
+설치 전 변경 계획만 확인하려면 다음과 같이 실행합니다.
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\Install-KeywordHighlight.ps1 -ConfigPath 'C:\Path\To\Config' -WhatIf
+```
+
+설치 제거와 최신 백업 복원은 다음과 같습니다.
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\Install-KeywordHighlight.ps1 -Uninstall
+```
+
+주요 옵션은 다음과 같습니다.
+
+- `-ConfigPath`: SecureCRT 설정 폴더 경로를 자동 탐색 대신 직접 지정합니다.
+- `-Force`: SecureCRT 실행 중 경고 프롬프트와 백업 확인 프롬프트를 건너뜁니다.
+- `-Uninstall`: 설치된 `PNET-Cisco-Dark.ini`를 제거/복원하고, 존재할 경우 스크립트가 만든 가장 최근 `Default.ini` 백업도 복원합니다. 백업이 없으면 현재 `Default.ini`를 임의로 지우지 않습니다.
+- `-WhatIf`: 실제로 파일을 변경하지 않고 예정된 작업만 출력합니다.
+
+설치 시 다음을 자동으로 적용합니다.
+
+- `Config\Sessions\Default.ini`가 없으면 새로 만들지 않고 명확한 오류로 종료합니다.
+- `S:"Color Scheme"=Birds of Paradise`
+- `D:"Use Cursor Color"=00000001`, `D:"Cursor Color"=00FFFFFF`
+- `S:"Keyword Set"=PNET-Cisco-Dark`
+- `D:"Highlight Reverse Video"=00000000`, `D:"Highlight Bold"=00000001`, `D:"Highlight Color"=00000001`
+- 기존 키워드 파일과 `Default.ini`를 덮어쓰기 전에 각각 timestamp 백업을 만들고, `-Uninstall`에서 최신 백업을 복원합니다.
+
+이 스크립트는 다음을 수행하지 않습니다.
+
+- 장비에 명령을 실행하지 않습니다.
+- 네트워크나 레지스트리에 접근하지 않습니다.
+
+스크립트 실행 전 SecureCRT를 종료하십시오. 실행 중이면 기존 확인/`-Force` 정책에 따라 경고하거나 계속 진행하지만, SecureCRT가 열린 설정을 다시 저장하면서 변경 내용을 덮어쓸 수 있습니다. 설치 후에는 SecureCRT를 다시 열어 테스트 출력으로 실제 표시를 확인해야 합니다.
 
 ## 색상 코드
 
@@ -95,12 +144,12 @@ INI의 색상값은 일반적인 SecureCRT/Windows `COLORREF` 저장 방식인 `
 
 ## 검증 방법
 
-README 또는 INI를 자동으로 설치하는 스크립트는 포함되어 있지 않습니다. 다음과 같이 수동 검증할 수 있습니다.
+`Install-KeywordHighlight.ps1`을 통해 키워드 파일과 기본 세션 옵션을 설치할 수 있지만, 실제 표시 여부는 다음과 같이 수동으로 검증해야 합니다.
 
-1. SecureCRT에서 키워드 목록이 활성화된 테스트 세션을 엽니다.
+1. SecureCRT를 다시 시작하고 기본 세션 또는 테스트 세션을 엽니다.
 2. 정상/장애 상태, STP, EtherChannel, HSRP, OSPF, VLAN/트렁크 및 프롬프트가 포함된 저장 출력 또는 테스트 장비 출력으로 확인합니다.
 3. 대소문자, 줄 시작 위치, 축약 표기, IPv4/MAC/인터페이스 형식이 실제 패턴과 일치하는지 확인합니다.
-4. 색상이 보이지 않거나 겹쳐 보이면 키워드 하이라이트 활성화 여부, 선택한 목록, 터미널 테마 및 해당 SecureCRT 버전의 정규식 지원 범위를 점검합니다.
+4. 색상이 보이지 않거나 겹쳐 보이면 `Default.ini`의 일곱 옵션, 선택된 키워드 세트, 터미널 테마 및 해당 SecureCRT 버전의 정규식 지원 범위를 점검합니다.
 
 ## 버전 관리
 
