@@ -4,9 +4,17 @@
 
 ## [Unreleased]
 
+아직 기록된 변경 사항이 없습니다.
+
+## [0.1.1] - 2026-08-16
+
 ### Added
 
-- `Install-KeywordHighlight.ps1` Windows용 설치/제거 PowerShell 스크립트를 추가했습니다. SecureCRT 설정 폴더 자동 탐색, `Keywords`의 키워드 ini와 `Sessions\Default.ini`의 기본 하이라이트 옵션 적용, 두 파일의 timestamp 백업, `-Uninstall`을 통한 최신 백업 복원, `-WhatIf`를 지원합니다.
+- `Install-KeywordHighlight.ps1` Windows 설치/제거 스크립트와 `PNET-Cisco-Dark.ini`를 함께 배포해야 하는 설치 자산으로 명시했습니다.
+
+### Changed
+
+- `README.md`에 자동 설치/제거 절차와 백업/복원 동작을 문서화했습니다.
 
 ## [0.1.0] - 2026-08-15
 
