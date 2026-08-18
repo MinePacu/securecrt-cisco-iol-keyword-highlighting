@@ -8,6 +8,14 @@
     -Uninstall 스위치로 키워드 파일을 제거하고 최신 백업을 복원하며,
     Default.ini도 스크립트가 만든 최신 백업이 있으면 복원합니다.
 
+    실행할 때 공개 저장소의 main 브랜치에 더 최신 버전이 있으면 설치 자산을
+    갱신한 뒤 같은 인자로 이 스크립트를 다시 실행합니다. 원격 확인이나
+    업데이트에 실패해도 기존 로컬 설치는 계속합니다.
+
+    -RollbackVersion을 지정하면 main 브랜치 self-update를 건너뛰고 해당 Git 태그의
+    PNET-Cisco-Dark.ini만 설치 대상에 적용합니다. 요청한 태그 CHANGELOG의 버전과
+    일치하지 않거나 원격 ini를 검증할 수 없으면 설치하지 않습니다.
+
     설정 파일을 수정하기 전에 SecureCRT를 종료하는 것이 좋습니다. -Force를
     사용하면 실행 중 경고와 기존 파일 덮어쓰기 확인을 건너뛰지만, 설정 파일이
     열려 있는 상태에서 변경하면 SecureCRT가 변경 내용을 덮어쓸 수 있습니다.
@@ -23,6 +31,14 @@
     설치된 키워드 ini를 제거하고, 존재할 경우 키워드 ini와 Default.ini의
     가장 최근 백업을 원래 이름으로 복원합니다.
 
+.PARAMETER SkipUpdate
+    원격 버전 확인과 self-update를 건너뜁니다.
+
+.PARAMETER RollbackVersion
+    지정한 Semantic Version의 Git 태그에서 PNET-Cisco-Dark.ini를 받아
+    설치 대상 SecureCRT Keywords 파일에만 적용합니다. v0.1.0 또는 0.1.0
+    형식을 사용할 수 있으며, -Version을 별칭으로 사용할 수 있습니다.
+
 .EXAMPLE
     powershell -ExecutionPolicy Bypass -File .\Install-KeywordHighlight.ps1
 
@@ -31,6 +47,12 @@
 
 .EXAMPLE
     powershell -ExecutionPolicy Bypass -File .\Install-KeywordHighlight.ps1 -Uninstall
+
+.EXAMPLE
+    powershell -ExecutionPolicy Bypass -File .\Install-KeywordHighlight.ps1 -SkipUpdate
+
+.EXAMPLE
+    powershell -ExecutionPolicy Bypass -File .\Install-KeywordHighlight.ps1 -RollbackVersion v0.1.0
 #>
 
 [CmdletBinding(SupportsShouldProcess = $true)]
@@ -42,10 +64,26 @@ param(
     [switch]$Force,
 
     [Parameter()]
-    [switch]$Uninstall
+    [switch]$Uninstall,
+
+    [Parameter()]
+    [switch]$SkipUpdate,
+
+    [Parameter()]
+    [Alias('Version')]
+    [string]$RollbackVersion
 )
 
 $ErrorActionPreference = 'Stop'
+
+$script:UpdateRepository = 'MinePacu/securecrt-cisco-iol-keyword-highlighting'
+$script:UpdateBranch = 'main'
+$script:UpdateInProgressVariable = 'CRT_CISCO_IOL_KEYWORD_HIGHLIGHT_UPDATE_IN_PROGRESS'
+$script:UpdateFileNames = @(
+    'Install-KeywordHighlight.ps1',
+    'PNET-Cisco-Dark.ini',
+    'CHANGELOG.md'
+)
 
 function Test-DirectoryExists {
     param([string]$Path)
@@ -55,6 +93,198 @@ function Test-DirectoryExists {
     }
 
     return Test-Path -LiteralPath $Path -PathType Container
+}
+
+function ConvertTo-SemVer {
+    param([Parameter(Mandatory = $true)][string]$Version)
+
+    $normalizedVersion = $Version.Trim()
+    if ($normalizedVersion.StartsWith('v', [System.StringComparison]::OrdinalIgnoreCase)) {
+        $normalizedVersion = $normalizedVersion.Substring(1)
+    }
+
+    $pattern = '^(?<major>0|[1-9][0-9]*)\.(?<minor>0|[1-9][0-9]*)\.(?<patch>0|[1-9][0-9]*)(?:-(?<prerelease>[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$'
+    $match = [System.Text.RegularExpressions.Regex]::Match($normalizedVersion, $pattern)
+    if (-not $match.Success) {
+        throw "유효하지 않은 Semantic Version입니다: $Version"
+    }
+
+    $preRelease = @()
+    if ($match.Groups['prerelease'].Success) {
+        foreach ($identifier in $match.Groups['prerelease'].Value.Split('.')) {
+            if ($identifier -match '^[0-9]+$' -and $identifier.Length -gt 1 -and $identifier.StartsWith('0')) {
+                throw "유효하지 않은 Semantic Version입니다: $Version"
+            }
+
+            $preRelease += $identifier
+        }
+    }
+
+    return [PSCustomObject]@{
+        Original   = $normalizedVersion
+        Major      = $match.Groups['major'].Value
+        Minor      = $match.Groups['minor'].Value
+        Patch      = $match.Groups['patch'].Value
+        PreRelease = $preRelease
+    }
+}
+
+function Compare-SemVerNumericIdentifier {
+    param(
+        [Parameter(Mandatory = $true)][string]$Left,
+        [Parameter(Mandatory = $true)][string]$Right
+    )
+
+    $leftNormalized = $Left.TrimStart('0')
+    $rightNormalized = $Right.TrimStart('0')
+    if ([string]::IsNullOrEmpty($leftNormalized)) { $leftNormalized = '0' }
+    if ([string]::IsNullOrEmpty($rightNormalized)) { $rightNormalized = '0' }
+
+    if ($leftNormalized.Length -lt $rightNormalized.Length) { return -1 }
+    if ($leftNormalized.Length -gt $rightNormalized.Length) { return 1 }
+
+    return [string]::Compare($leftNormalized, $rightNormalized, [System.StringComparison]::Ordinal)
+}
+
+function Compare-SemVer {
+    param(
+        [Parameter(Mandatory = $true)][object]$Left,
+        [Parameter(Mandatory = $true)][object]$Right
+    )
+
+    foreach ($property in @('Major', 'Minor', 'Patch')) {
+        $comparison = Compare-SemVerNumericIdentifier -Left ([string]$Left.$property) -Right ([string]$Right.$property)
+        if ($comparison -lt 0) { return -1 }
+        if ($comparison -gt 0) { return 1 }
+    }
+
+    $leftPreRelease = @()
+    $rightPreRelease = @()
+    if ($null -ne $Left.PreRelease) { $leftPreRelease = @($Left.PreRelease) }
+    if ($null -ne $Right.PreRelease) { $rightPreRelease = @($Right.PreRelease) }
+
+    if ($leftPreRelease.Count -eq 0 -and $rightPreRelease.Count -eq 0) { return 0 }
+    if ($leftPreRelease.Count -eq 0) { return 1 }
+    if ($rightPreRelease.Count -eq 0) { return -1 }
+
+    $identifierCount = [Math]::Max($leftPreRelease.Count, $rightPreRelease.Count)
+    for ($index = 0; $index -lt $identifierCount; $index++) {
+        if ($index -ge $leftPreRelease.Count) { return -1 }
+        if ($index -ge $rightPreRelease.Count) { return 1 }
+
+        $leftIdentifier = [string]$leftPreRelease[$index]
+        $rightIdentifier = [string]$rightPreRelease[$index]
+        $leftIsNumeric = $leftIdentifier -match '^[0-9]+$'
+        $rightIsNumeric = $rightIdentifier -match '^[0-9]+$'
+
+        if ($leftIsNumeric -and $rightIsNumeric) {
+            $comparison = Compare-SemVerNumericIdentifier -Left $leftIdentifier -Right $rightIdentifier
+            if ($comparison -lt 0) { return -1 }
+            if ($comparison -gt 0) { return 1 }
+        }
+        elseif ($leftIsNumeric -and -not $rightIsNumeric) {
+            return -1
+        }
+        elseif (-not $leftIsNumeric -and $rightIsNumeric) {
+            return 1
+        }
+        else {
+            $comparison = [string]::Compare($leftIdentifier, $rightIdentifier, [System.StringComparison]::Ordinal)
+            if ($comparison -lt 0) { return -1 }
+            if ($comparison -gt 0) { return 1 }
+        }
+    }
+
+    return 0
+}
+
+function Get-ChangelogVersion {
+    param([Parameter(Mandatory = $true)][string]$Content)
+
+    $pattern = '(?m)^\s*##\s*\[\s*(?<version>v?[0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?)\s*\]'
+    $match = [System.Text.RegularExpressions.Regex]::Match($Content, $pattern)
+    if (-not $match.Success) {
+        throw 'CHANGELOG.md에서 릴리스 버전을 찾을 수 없습니다.'
+    }
+
+    return ConvertTo-SemVer -Version $match.Groups['version'].Value
+}
+
+function Get-GitHubFile {
+    param(
+        [Parameter(Mandatory = $true)][string]$Path,
+        [Parameter()][string]$Ref = $script:UpdateBranch
+    )
+
+    $encodedPath = (($Path -split '/') | ForEach-Object { [System.Uri]::EscapeDataString($_) }) -join '/'
+    $encodedRef = [System.Uri]::EscapeDataString($Ref)
+    $uri = "https://api.github.com/repos/$($script:UpdateRepository)/contents/$encodedPath?ref=$encodedRef"
+    $headers = @{
+        Accept     = 'application/vnd.github+json'
+        'User-Agent' = 'CRT-Cisco-IOL-Highlight-Installer'
+    }
+
+    $response = Invoke-RestMethod -Uri $uri -Method Get -Headers $headers -TimeoutSec 15
+    if ($response.type -ne 'file' -or [string]::IsNullOrWhiteSpace([string]$response.content)) {
+        throw "GitHub에서 파일 내용을 받지 못했습니다: $Path"
+    }
+
+    try {
+        $bytes = [Convert]::FromBase64String(([string]$response.content -replace '\s', ''))
+    }
+    catch {
+        throw "GitHub 파일의 Base64 내용을 해석하지 못했습니다: $Path"
+    }
+
+    [PSCustomObject]@{
+        Path  = $Path
+        Bytes = $bytes
+        Text  = [System.Text.UTF8Encoding]::new($false, $true).GetString($bytes)
+    }
+}
+
+function Get-RollbackAsset {
+    param([Parameter(Mandatory = $true)][object]$Version)
+
+    # Version has already passed ConvertTo-SemVer before this function is called.
+    # Only this validated value is used to construct the Git ref.
+    $tagRef = 'v' + $Version.Original
+    $iniFile = Get-GitHubFile -Path 'PNET-Cisco-Dark.ini' -Ref $tagRef
+    $changelogFile = Get-GitHubFile -Path 'CHANGELOG.md' -Ref $tagRef
+
+    if ($null -eq $iniFile.Bytes -or $iniFile.Bytes.Length -eq 0 -or
+        [string]::IsNullOrWhiteSpace([string]$iniFile.Text) -or
+        $iniFile.Text -notmatch '(?m)^\s*S:"Keyword List"=') {
+        throw "GitHub 태그 $tagRef의 PNET-Cisco-Dark.ini가 비어 있거나 유효한 INI가 아닙니다."
+    }
+
+    $changelogVersion = Get-ChangelogVersion -Content $changelogFile.Text
+    if (-not [string]::Equals(
+            $Version.Original,
+            $changelogVersion.Original,
+            [System.StringComparison]::Ordinal)) {
+        throw "GitHub 태그 $tagRef의 CHANGELOG 버전($($changelogVersion.Original))이 요청한 버전($($Version.Original))과 일치하지 않습니다."
+    }
+
+    [PSCustomObject]@{
+        Tag   = $tagRef
+        Bytes = $iniFile.Bytes
+    }
+}
+
+function Test-InstallScriptContent {
+    param([Parameter(Mandatory = $true)][string]$Content)
+
+    if ($Content -notmatch '(?m)^\s*\[CmdletBinding\(' -or $Content -notmatch '(?m)^\s*param\s*\(') {
+        throw '원격 설치 스크립트의 기본 PowerShell 구조를 확인할 수 없습니다.'
+    }
+
+    $tokens = $null
+    $parseErrors = $null
+    [void][System.Management.Automation.Language.Parser]::ParseInput($Content, [ref]$tokens, [ref]$parseErrors)
+    if ($parseErrors.Count -gt 0) {
+        throw "원격 설치 스크립트의 PowerShell 문법을 확인할 수 없습니다: $($parseErrors[0].Message)"
+    }
 }
 
 function Get-TextFileInfo {
@@ -171,6 +401,24 @@ function Write-TextFileAtomic {
     }
 }
 
+function Write-BytesAtomic {
+    param(
+        [Parameter(Mandatory = $true)][string]$Path,
+        [Parameter(Mandatory = $true)][byte[]]$Bytes
+    )
+
+    $temporaryPath = New-TemporaryPath -Path $Path
+    try {
+        [System.IO.File]::WriteAllBytes($temporaryPath, $Bytes)
+        Move-Item -LiteralPath $temporaryPath -Destination $Path -Force | Out-Null
+    }
+    finally {
+        if (Test-Path -LiteralPath $temporaryPath -PathType Leaf) {
+            Remove-Item -LiteralPath $temporaryPath -Force -ErrorAction SilentlyContinue
+        }
+    }
+}
+
 function Get-TimestampBackupPath {
     param(
         [Parameter(Mandatory = $true)][string]$Directory,
@@ -270,6 +518,134 @@ function Restore-BackupAtomic {
     Remove-Item -LiteralPath $BackupPath -Force
 }
 
+function Get-RestartArguments {
+    $arguments = New-Object System.Collections.Generic.List[object]
+
+    if ($ConfigPath) {
+        $null = $arguments.Add('-ConfigPath')
+        $null = $arguments.Add($ConfigPath)
+    }
+    if ($Force) {
+        $null = $arguments.Add('-Force')
+    }
+    if ($Uninstall) {
+        $null = $arguments.Add('-Uninstall')
+    }
+    if ($WhatIfPreference) {
+        $null = $arguments.Add('-WhatIf')
+    }
+    if ($RollbackVersion) {
+        $null = $arguments.Add('-RollbackVersion')
+        $null = $arguments.Add($RollbackVersion)
+    }
+
+    return ,$arguments.ToArray()
+}
+
+function Invoke-SelfUpdate {
+    if ($SkipUpdate -or $RollbackVersion -or
+        [string]::Equals(
+            [Environment]::GetEnvironmentVariable($script:UpdateInProgressVariable, 'Process'),
+            '1',
+            [System.StringComparison]::Ordinal)) {
+        return
+    }
+
+    try {
+        $localChangelogPath = Join-Path $PSScriptRoot 'CHANGELOG.md'
+        if (-not (Test-Path -LiteralPath $localChangelogPath -PathType Leaf)) {
+            throw "로컬 CHANGELOG.md를 찾을 수 없습니다: $localChangelogPath"
+        }
+
+        $localChangelogContent = [System.IO.File]::ReadAllText(
+            $localChangelogPath,
+            [System.Text.UTF8Encoding]::new($false, $true))
+        $localVersion = Get-ChangelogVersion -Content $localChangelogContent
+
+        $remoteFiles = @{}
+        foreach ($fileName in $script:UpdateFileNames) {
+            $remoteFiles[$fileName] = Get-GitHubFile -Path $fileName
+        }
+
+        $remoteVersion = Get-ChangelogVersion -Content $remoteFiles['CHANGELOG.md'].Text
+        $versionComparison = Compare-SemVer -Left $localVersion -Right $remoteVersion
+        if ($versionComparison -ge 0) {
+            return
+        }
+
+        Write-Host "[업데이트] 원격 버전 $($remoteVersion.Original)이 로컬 버전 $($localVersion.Original)보다 최신입니다."
+        Test-InstallScriptContent -Content $remoteFiles['Install-KeywordHighlight.ps1'].Text
+        if ($remoteFiles['PNET-Cisco-Dark.ini'].Bytes.Length -eq 0) {
+            throw '원격 PNET-Cisco-Dark.ini가 비어 있습니다.'
+        }
+
+        if ($WhatIfPreference) {
+            Write-Host '[WhatIf] 설치 스크립트와 관련 파일을 갱신하고 다시 실행하는 작업을 건너뜁니다.'
+            return
+        }
+
+        $stagingDirectory = Join-Path ([System.IO.Path]::GetTempPath()) ('.crt-cisco-iol-update-' + [guid]::NewGuid().ToString('N'))
+        New-Item -ItemType Directory -Path $stagingDirectory -Force | Out-Null
+        try {
+            foreach ($fileName in $script:UpdateFileNames) {
+                $stagedPath = Join-Path $stagingDirectory $fileName
+                [System.IO.File]::WriteAllBytes($stagedPath, $remoteFiles[$fileName].Bytes)
+            }
+
+            foreach ($fileName in $script:UpdateFileNames) {
+                $destinationPath = Join-Path $PSScriptRoot $fileName
+                Write-BytesAtomic -Path $destinationPath -Bytes $remoteFiles[$fileName].Bytes
+            }
+
+            $shellCommand = if ($PSVersionTable.PSEdition -eq 'Desktop') { 'powershell.exe' } else { 'pwsh' }
+            $shellPath = (Get-Command $shellCommand -ErrorAction Stop).Path
+            $restartArguments = Get-RestartArguments
+            $previousUpdateFlag = [Environment]::GetEnvironmentVariable($script:UpdateInProgressVariable, 'Process')
+            [Environment]::SetEnvironmentVariable($script:UpdateInProgressVariable, '1', 'Process')
+            try {
+                & $shellPath -NoProfile -ExecutionPolicy Bypass -File $PSCommandPath @restartArguments
+                $restartExitCode = $LASTEXITCODE
+            }
+            finally {
+                [Environment]::SetEnvironmentVariable($script:UpdateInProgressVariable, $previousUpdateFlag, 'Process')
+            }
+
+            if ($null -eq $restartExitCode) {
+                $restartExitCode = 0
+            }
+
+            if ($restartExitCode -ne 0) {
+                throw "업데이트된 스크립트의 재실행이 종료 코드 $restartExitCode로 실패했습니다."
+            }
+
+            exit 0
+        }
+        finally {
+            if (Test-Path -LiteralPath $stagingDirectory -PathType Container) {
+                Remove-Item -LiteralPath $stagingDirectory -Recurse -Force -ErrorAction SilentlyContinue
+            }
+        }
+    }
+    catch {
+        Write-Warning "[업데이트] 원격 업데이트를 적용하지 못했습니다: $($_.Exception.Message) 기존 로컬 설치를 계속합니다."
+    }
+}
+
+$rollbackRequested = $PSBoundParameters.ContainsKey('RollbackVersion')
+$rollbackSemVer = $null
+if ($rollbackRequested -and $Uninstall) {
+    throw '-RollbackVersion과 -Uninstall은 함께 사용할 수 없습니다. 하나만 지정하십시오.'
+}
+
+if ($rollbackRequested) {
+    try {
+        $rollbackSemVer = ConvertTo-SemVer -Version $RollbackVersion
+    }
+    catch {
+        throw "-RollbackVersion 값이 유효한 Semantic Version이 아닙니다: $RollbackVersion"
+    }
+}
+
 # --- 1. Windows 여부 확인 -------------------------------------------------
 $isWindowsOs = $false
 if ($PSVersionTable.PSEdition -eq 'Desktop') {
@@ -289,14 +665,34 @@ if (-not $isWindowsOs) {
     exit 1
 }
 
+$rollbackAsset = $null
+if ($rollbackRequested) {
+    try {
+        $rollbackAsset = Get-RollbackAsset -Version $rollbackSemVer
+        Write-Host "[회귀] GitHub 태그 $($rollbackAsset.Tag)의 PNET-Cisco-Dark.ini를 확인했습니다."
+    }
+    catch {
+        $rollbackErrorMessage = '[회귀] 지정한 버전의 설치 자산을 확인하지 못했습니다. 설치를 진행하지 않습니다: ' + $_.Exception.Message
+        throw $rollbackErrorMessage
+    }
+}
+else {
+    Invoke-SelfUpdate
+}
+
 # --- 2. 소스 ini 파일 확인 (초기에 먼저 확인) -----------------------------
 $sourceIniPath = Join-Path $PSScriptRoot 'PNET-Cisco-Dark.ini'
-if (-not (Test-Path -LiteralPath $sourceIniPath -PathType Leaf)) {
+if (-not $rollbackRequested -and -not (Test-Path -LiteralPath $sourceIniPath -PathType Leaf)) {
     Write-Error "원본 파일을 찾을 수 없습니다: $sourceIniPath. 스크립트와 같은 폴더에 PNET-Cisco-Dark.ini가 있는지 확인하십시오."
     exit 1
 }
 
-$keywordSetName = [System.IO.Path]::GetFileNameWithoutExtension($sourceIniPath)
+$keywordSetName = if ($rollbackRequested) {
+    'PNET-Cisco-Dark'
+}
+else {
+    [System.IO.Path]::GetFileNameWithoutExtension($sourceIniPath)
+}
 if ([string]::IsNullOrWhiteSpace($keywordSetName)) {
     Write-Error "키워드 ini 파일의 basename을 확인할 수 없습니다: $sourceIniPath"
     exit 1
@@ -469,7 +865,12 @@ try {
     }
 
     if ($PSCmdlet.ShouldProcess($destinationIniPath, "$destinationFileName 설치")) {
-        Copy-FileAtomic -Source $sourceIniPath -Destination $destinationIniPath
+        if ($rollbackRequested) {
+            Write-BytesAtomic -Path $destinationIniPath -Bytes $rollbackAsset.Bytes
+        }
+        else {
+            Copy-FileAtomic -Source $sourceIniPath -Destination $destinationIniPath
+        }
     }
 
     if ($PSCmdlet.ShouldProcess($defaultIniPath, '기본 세션 옵션 적용')) {

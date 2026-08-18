@@ -4,7 +4,16 @@
 
 ## [Unreleased]
 
-아직 기록된 변경 사항이 없습니다.
+### Added
+
+- `Install-KeywordHighlight.ps1`이 공개 저장소의 더 최신 버전을 확인하고, 설치 자산을 갱신한 뒤 원래 인자로 다시 실행하도록 했습니다.
+- 원격 업데이트를 건너뛰는 `-SkipUpdate` 옵션을 추가했습니다.
+- `-RollbackVersion`과 `-Version` 별칭으로 Git 태그의 `PNET-Cisco-Dark.ini`를 설치 대상에 적용하는 기능을 추가했습니다.
+
+### Changed
+
+- 자동 업데이트의 SemVer 비교, `-WhatIf` 동작, 네트워크 실패 시 안전한 계속 진행을 문서화했습니다.
+- 회귀 시 태그의 `CHANGELOG.md` 버전과 요청 버전을 검증하고, 현재 저장소의 ini는 변경하지 않도록 했습니다. `-RollbackVersion`과 `-Uninstall`의 충돌도 명확한 오류로 처리합니다.
 
 ## [0.1.1] - 2026-08-16
 

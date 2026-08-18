@@ -62,6 +62,33 @@ powershell -ExecutionPolicy Bypass -File .\Install-KeywordHighlight.ps1 -Uninsta
 - `-Force`: SecureCRT 실행 중 경고 프롬프트와 백업 확인 프롬프트를 건너뜁니다.
 - `-Uninstall`: 설치된 `PNET-Cisco-Dark.ini`를 제거/복원하고, 존재할 경우 스크립트가 만든 가장 최근 `Default.ini` 백업도 복원합니다. 백업이 없으면 현재 `Default.ini`를 임의로 지우지 않습니다.
 - `-WhatIf`: 실제로 파일을 변경하지 않고 예정된 작업만 출력합니다.
+- `-SkipUpdate`: GitHub 원격 버전 확인과 self-update를 건너뜁니다.
+- `-RollbackVersion` (별칭 `-Version`): `v0.1.0` 또는 `0.1.0`처럼 유효한 Semantic Version을 지정합니다. 해당 Git 태그에서 `PNET-Cisco-Dark.ini`와 `CHANGELOG.md`를 확인한 뒤, 태그의 `PNET-Cisco-Dark.ini`만 설치 대상 `Keywords\PNET-Cisco-Dark.ini`에 적용합니다.
+
+스크립트는 설치/제거 작업 전에 공개 저장소의 `main` 브랜치에서 `CHANGELOG.md`의
+최신 Semantic Version을 확인합니다. `-RollbackVersion`을 지정하지 않은 경우 원격 버전이 더 높으면 설치 스크립트,
+`PNET-Cisco-Dark.ini`, `CHANGELOG.md`를 임시 위치에서 검증한 뒤 갱신하고,
+`-ConfigPath`, `-Force`, `-Uninstall`, `-WhatIf` 인자를 보존해 최신 스크립트를
+한 번만 다시 실행합니다. `-WhatIf`에서는 원격 확인과 예정 작업 출력만 수행하며
+파일 갱신이나 재실행을 하지 않습니다. 네트워크/GitHub API 오류나 원격 파일 검증
+실패는 경고로 알리고 기존 로컬 설치를 계속합니다. 자동 업데이트가 필요하지 않거나
+오프라인으로 실행하려면 `-SkipUpdate`를 사용하십시오.
+
+특정 태그의 설정으로 회귀하려면 다음과 같이 실행합니다. `-Version`도 같은 옵션의
+별칭입니다.
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\Install-KeywordHighlight.ps1 -ConfigPath 'C:\Path\To\Config' -RollbackVersion v0.1.0
+powershell -ExecutionPolicy Bypass -File .\Install-KeywordHighlight.ps1 -ConfigPath 'C:\Path\To\Config' -Version 0.1.0 -WhatIf
+```
+
+회귀는 `MinePacu/securecrt-cisco-iol-keyword-highlighting`의 `v<버전>` 태그에서
+`PNET-Cisco-Dark.ini`와 `CHANGELOG.md`를 가져와 CHANGELOG 버전이 요청 버전과
+정확히 일치하는지 확인합니다. 확인에 실패하거나 ini가 비어 있으면 설치를 중단하며,
+현재 저장소의 `PNET-Cisco-Dark.ini`는 덮어쓰지 않습니다. 회귀 시에도 기존 키워드
+파일과 `Default.ini` 백업 및 기본 세션 옵션 적용은 계속 수행합니다. `Default.ini`는
+버전별 회귀 대상 자산이 아니므로 현재 설치 로직의 옵션만 적용됩니다. `-RollbackVersion`
+과 `-Uninstall`은 함께 사용할 수 없습니다.
 
 설치 시 다음을 자동으로 적용합니다.
 
@@ -75,7 +102,7 @@ powershell -ExecutionPolicy Bypass -File .\Install-KeywordHighlight.ps1 -Uninsta
 이 스크립트는 다음을 수행하지 않습니다.
 
 - 장비에 명령을 실행하지 않습니다.
-- 네트워크나 레지스트리에 접근하지 않습니다.
+- 자동 업데이트 외의 네트워크나 레지스트리 작업을 수행하지 않습니다.
 
 스크립트 실행 전 SecureCRT를 종료하십시오. 실행 중이면 기존 확인/`-Force` 정책에 따라 경고하거나 계속 진행하지만, SecureCRT가 열린 설정을 다시 저장하면서 변경 내용을 덮어쓸 수 있습니다. 설치 후에는 SecureCRT를 다시 열어 테스트 출력으로 실제 표시를 확인해야 합니다.
 
@@ -156,3 +183,7 @@ INI의 색상값은 일반적인 SecureCRT/Windows `COLORREF` 저장 방식인 `
 변경 기록의 기준 파일은 [`CHANGELOG.md`](CHANGELOG.md)입니다. 버전은 Semantic Versioning의 `MAJOR.MINOR.PATCH` 규칙을 따르며, 호환성이 깨지는 변경은 MAJOR, 하위 호환 기능 추가는 MINOR, 하위 호환 버그 수정이나 문서 수정은 PATCH를 올립니다.
 
 변경 중인 항목은 `CHANGELOG.md`의 `Unreleased`에 기록하고, 릴리스할 때 해당 내용을 새 버전 번호와 날짜로 확정합니다. 릴리스마다 전용 커밋을 만들고 `vX.Y.Z` 형식의 Git 태그를 함께 생성하는 것을 권장합니다.
+
+자동 업데이트는 GitHub Release나 태그 API를 호출하지 않고, 공개 저장소의 기본
+`main` 브랜치 `CHANGELOG.md`에서 가장 최근의 SemVer 항목을 기준으로 동작합니다.
+따라서 릴리스 커밋과 CHANGELOG를 먼저 갱신해야 사용자 스크립트가 새 버전을 감지합니다.
