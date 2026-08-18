@@ -9,102 +9,141 @@
 - 정규식 패턴으로 상태 문자열, 숫자, IP 주소, 인터페이스 이름, 프롬프트 등을 하이라이트합니다.
 - 키워드 목록 자체에 설치 스크립트, 자동화 명령, 외부 의존성은 포함하지 않습니다.
 
-## 제공 파일
+## 빠른 시작
 
-- `PNET-Cisco-Dark.ini`: SecureCRT용 키워드 하이라이트 목록
-- `README.md`: 설정의 범위, 적용 시 주의사항 및 그룹/색상 설명
-- `Install-KeywordHighlight.ps1`: Windows용 자동 설치/제거 PowerShell 스크립트. SecureCRT 설정 폴더를 자동으로 탐색하고, `Keywords` 폴더에 ini를 백업/설치한 뒤 `Sessions\Default.ini`의 기본 세션 하이라이트 옵션을 갱신합니다. `-Uninstall`로 키워드 파일과 스크립트가 만든 최신 `Default.ini` 백업을 복원하며, `-WhatIf`를 지원합니다.
+### 준비 사항
 
-현재 저장소에는 설치 스크립트(`Install-KeywordHighlight.ps1`)가 포함되어 있지만, 별도의 라이선스 문서는 없습니다. 이 저장소의 설정과 스크립트는 Cisco 장비에 명령을 실행하거나 장비 설정을 변경하지 않으며, 스크립트는 로컬 SecureCRT 설정 파일을 갱신합니다.
+- 이 설치 스크립트는 Windows에서만 실행됩니다.
+- 저장소의 `Install-KeywordHighlight.ps1`과 `PNET-Cisco-Dark.ini`가 함께 있는지 확인하십시오.
+- 설치 전 SecureCRT를 종료하고, 가능하면 SecureCRT의 설정 폴더와 세션/글로벌 설정을 별도로 백업하십시오. 스크립트도 덮어쓰기 직전에 timestamp 백업을 만들지만, 별도 보관본을 추가로 준비하는 것이 안전합니다.
 
-## SecureCRT에서 적용하기
+### PowerShell 실행 위치와 일반 설치
 
-설치 작업은 `Install-KeywordHighlight.ps1`을 한 번 실행하는 것으로 끝납니다. 이 실행이 `Keywords\PNET-Cisco-Dark.ini` 설치와 `Sessions\Default.ini`의 기본 세션 설정 적용을 함께 수행하므로, 설치 후 별도로 ini를 복사하거나 세션 옵션을 수동으로 입력할 필요가 없습니다.
+PowerShell을 저장소 폴더에서 실행하십시오. 저장소 폴더가 현재 위치가 아니라면 먼저 그 폴더로 이동합니다.
 
-1. 적용 전에 SecureCRT를 종료하고 현재 세션/글로벌 설정을 백업합니다. 스크립트도 덮어쓰기 직전에 키워드 파일과 `Sessions\Default.ini`를 각각 timestamp 백업하지만, 별도 보관본을 추가로 준비하는 것이 좋습니다.
-2. SecureCRT의 전역 옵션에서 설정 폴더 위치를 확인합니다. 일반적으로 `Options` 또는 `Global Options`의 설정 경로(Configuration Folder) 항목에서 확인할 수 있습니다. 경로를 알고 있다면 아래 Windows 설치 명령의 `-ConfigPath`에 지정합니다.
-3. 아래 단일 설치 명령을 실행합니다. 설정 폴더 자동 탐색을 사용하려면 `-ConfigPath`를 생략할 수 있습니다.
-4. SecureCRT를 다시 시작하고 테스트 장비나 저장된 CLI 출력으로 실제 표시를 확인합니다. 예를 들어 `show interfaces`, `show spanning-tree`, `show etherchannel summary`, `show standby`, `show ip ospf neighbor` 등의 출력에서 의도한 항목이 보이는지 점검합니다.
+```powershell
+Set-Location 'C:\Path\To\securecrt-cisco-iol-keyword-highlighting'
+powershell -ExecutionPolicy Bypass -File .\Install-KeywordHighlight.ps1
+```
 
-SecureCRT 설정 폴더와 `Keywords` 하위 폴더의 실제 위치는 버전·운영체제·프로필 구성에 따라 달라질 수 있습니다. `-ConfigPath`에는 `Sessions\Default.ini`가 들어 있는 설정 폴더를 지정하십시오. 설치 후 SecureCRT 메뉴에서 설정을 확인할 때 메뉴 명칭은 버전에 따라 다를 수 있습니다.
+`-ConfigPath`를 생략하면 스크립트가 아래 순서로 SecureCRT 설정 폴더를 자동 탐색하고, **처음으로 존재하는 폴더**를 사용합니다.
 
-## Windows 자동 설치 스크립트
+1. `%APPDATA%\VanDyke\Config`
+2. `%APPDATA%\VanDyke\SecureCRT\Config`
+3. `%LOCALAPPDATA%\VanDyke\SecureCRT\Config`
+4. `%USERPROFILE%\Documents\SecureCRT\Config`
 
-`Install-KeywordHighlight.ps1`은 위 절차를 Windows 환경에서 자동화하는 PowerShell 스크립트입니다. 스크립트와 같은 폴더의 ini 파일 basename에서 키워드 세트 이름을 derive하므로, 현재 대상 이름은 `PNET-Cisco-Dark`입니다.
-
-사용 예시(키워드 파일과 `Default.ini`를 함께 설치):
+자동 탐색 대신 경로를 직접 지정하려면 `-ConfigPath`에 **SecureCRT 설정 폴더 자체**를 입력하십시오. `Keywords` 폴더나 `Default.ini` 파일 경로를 입력하면 안 됩니다. 지정한 폴더 안에는 `Sessions\Default.ini`가 있어야 하며, 경로가 존재하지 않거나 이 구조가 아니면 오류로 종료합니다.
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\Install-KeywordHighlight.ps1 -ConfigPath 'C:\Path\To\Config'
 ```
 
-`-ConfigPath`를 생략하고 일반적인 SecureCRT 경로를 자동 탐색하게 하려면 다음과 같이 실행합니다.
+자동 탐색 후보를 모두 찾지 못한 경우 `-Force`가 없으면 다음 프롬프트가 표시됩니다.
+
+```text
+SecureCRT 설정 폴더를 자동으로 찾지 못했습니다. 설정 폴더 경로를 직접 입력하십시오:
+```
+
+이때 `Sessions\Default.ini`가 들어 있는 **전체 설정 폴더 경로**를 입력하고 Enter를 누르십시오. 잘못된 경로를 입력하면 종료합니다. `-Force`를 함께 사용하면 이 프롬프트가 나오지 않고 자동 탐색 실패가 오류가 되므로, 이 경우에는 반드시 유효한 `-ConfigPath`를 명시해야 합니다.
+
+### 설치 전후 순서
+
+1. SecureCRT를 종료하고 별도 설정 백업을 준비합니다.
+2. PowerShell에서 저장소 폴더로 이동합니다.
+3. 일반 설치 명령을 실행하거나, 필요한 경우 `-ConfigPath`로 설정 폴더를 직접 지정합니다.
+4. 실행 중인 SecureCRT, 기존 키워드 파일, 기존 `Default.ini`에 대한 확인이 나오면 아래 [입력과 선택지](#입력과-선택지)의 규칙대로 응답합니다. 승인 입력은 `Y` 또는 `y`뿐입니다.
+5. 설치가 끝나면 SecureCRT를 다시 시작합니다.
+6. 저장된 CLI 출력 또는 테스트 장비에서 하이라이트와 실제 색상을 확인합니다. 예를 들어 `show interfaces`, `show spanning-tree`, `show etherchannel summary`, `show standby`, `show ip ospf neighbor` 등의 출력으로 점검할 수 있습니다.
+
+## Windows 자동 설치 스크립트
+
+`Install-KeywordHighlight.ps1`은 SecureCRT 설정 폴더를 확인한 뒤 `Keywords\PNET-Cisco-Dark.ini`를 설치하고, `Sessions\Default.ini`에 기본 세션 하이라이트 옵션을 적용하는 Windows용 PowerShell 스크립트입니다. 스크립트와 같은 폴더의 ini 파일 basename에서 키워드 세트 이름을 정하므로 현재 대상 이름은 `PNET-Cisco-Dark`입니다.
+
+### 입력과 선택지
+
+| 상황 | 스크립트가 묻는 내용 | 입력 방법과 결과 |
+|---|---|---|
+| 자동 탐색 실패(`-Force` 없음) | `SecureCRT 설정 폴더를 자동으로 찾지 못했습니다. 설정 폴더 경로를 직접 입력하십시오` | `Sessions\Default.ini`가 있는 전체 설정 폴더 경로를 입력하고 Enter를 누릅니다. 잘못된 경로면 종료합니다. |
+| SecureCRT 실행 중(`-Force` 없음) | `계속하시겠습니까? (Y/N)` | `Y` 또는 `y`만 계속입니다. 그 밖의 모든 입력은 취소이며 변경하지 않습니다. 종료 후 실행하는 것을 권장합니다. |
+| 기존 `PNET-Cisco-Dark.ini` 존재(`-Force`/`-WhatIf` 없음) | `기존 PNET-Cisco-Dark.ini가 존재합니다. 백업 후 덮어쓰시겠습니까? (Y/N)` | `Y` 또는 `y`만 백업 후 덮어쓰기를 승인합니다. 그 밖의 입력은 취소이며 변경하지 않습니다. |
+| 기존 `Default.ini` 적용(`-Force`/`-WhatIf` 없음) | `기존 Default.ini가 존재합니다. 백업 후 기본 세션 설정을 적용하시겠습니까? (Y/N)` | `Y` 또는 `y`만 백업 후 기본 옵션 적용을 승인합니다. 그 밖의 입력은 취소이며 변경하지 않습니다. |
+
+따라서 `yes`, `Yes`, `예` 등은 승인 입력으로 취급되지 않습니다. 각 질문에는 반드시 `Y` 또는 `y`를 입력하십시오. `-WhatIf`를 사용하면 두 파일의 설치 확인 프롬프트는 건너뛰지만, 실제 변경 없이도 Windows 실행 환경, 설정 경로, `Sessions\Default.ini` 존재 여부 및 필요한 접근 권한을 검증해야 합니다. SecureCRT 실행 여부 확인은 `-WhatIf`가 자동으로 건너뛰는 항목이 아니며, 실행 중이고 `-Force`도 없으면 해당 프롬프트가 표시될 수 있습니다.
+
+### 주요 옵션
+
+| 옵션 | 입력과 동작 |
+|---|---|
+| `-ConfigPath <경로>` | `Sessions\Default.ini`가 들어 있는 SecureCRT 설정 폴더 자체를 입력합니다. `Keywords` 폴더나 `Default.ini` 파일을 지정하지 마십시오. 존재하지 않는 경로면 오류로 종료합니다. 생략 시 위의 후보 경로를 순서대로 자동 탐색합니다. |
+| `-Force` | SecureCRT 실행 확인과 기존 키워드 파일/`Default.ini`의 백업 후 적용 확인을 건너뜁니다. 자동 탐색 실패를 해결하는 옵션은 아니므로, 자동 탐색이 실패할 때는 `-ConfigPath`를 명시해야 합니다. 실행 중인 SecureCRT가 설정 파일을 다시 저장해 변경 내용을 덮어쓸 수 있으므로 종료 후 실행하는 것이 좋습니다. |
+| `-WhatIf` | 실제 파일 변경 없이 예정된 작업만 출력합니다. 설치 확인 프롬프트는 건너뛰지만 경로·파일·접근 권한 검증은 필요합니다. |
+| `-Uninstall` | 설치된 키워드 파일이 있으면 가장 최근 키워드 백업을 복원합니다. 키워드 백업이 없으면 현재 `PNET-Cisco-Dark.ini`를 제거할 수 있습니다. 가장 최근 `Default.ini` 백업도 있으면 복원하지만, 백업이 없을 때 현재 `Default.ini`를 임의로 삭제하거나 변경하지 않습니다. `-RollbackVersion`/`-Version`과 함께 사용할 수 없습니다. |
+| `-SkipUpdate` | GitHub 원격 버전 확인과 self-update를 건너뜁니다. 인터넷에 연결되지 않은 환경에서는 이 옵션을 사용하십시오. |
+| `-RollbackVersion <버전>` | `v0.1.0` 또는 `0.1.0`처럼 유효한 Semantic Version을 입력합니다. 별칭은 `-Version`입니다. 해당 Git 태그의 `PNET-Cisco-Dark.ini`와 `CHANGELOG.md`를 검증한 뒤 태그의 ini를 설치합니다. |
+
+일반 설치/제거는 공개 저장소 `MinePacu/securecrt-cisco-iol-keyword-highlighting`의 `main` 브랜치에서 최신 `CHANGELOG.md` 버전을 확인합니다. 원격 버전이 더 높으면 설치 스크립트, `PNET-Cisco-Dark.ini`, `CHANGELOG.md`를 검증해 self-update한 뒤 원래 인자를 보존하여 다시 실행합니다. 네트워크 연결이나 원격 검증에 실패하면 경고를 표시하고 기존 로컬 설치를 계속합니다. 오프라인이거나 원격 확인을 원하지 않으면 `-SkipUpdate`를 지정하십시오. `-RollbackVersion`을 지정한 경우에는 일반 최신 버전 확인 대신 지정한 Git 태그를 검증합니다.
+
+### 설치, 변경 계획, 제거 명령
+
+키워드 파일과 기본 세션 옵션을 설치합니다.
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\Install-KeywordHighlight.ps1 -ConfigPath 'C:\Path\To\Config'
+```
+
+경로 자동 탐색을 사용하려면 `-ConfigPath`를 생략합니다.
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\Install-KeywordHighlight.ps1
 ```
 
-설치 전 변경 계획만 확인하려면 다음과 같이 실행합니다.
+변경 계획만 확인합니다. `-WhatIf`에서는 실제 파일을 쓰거나 백업을 만들지 않습니다.
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\Install-KeywordHighlight.ps1 -ConfigPath 'C:\Path\To\Config' -WhatIf
 ```
 
-설치 제거와 최신 백업 복원은 다음과 같습니다.
+설치된 키워드 파일과 스크립트가 만든 최신 백업을 복원합니다.
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\Install-KeywordHighlight.ps1 -Uninstall
+powershell -ExecutionPolicy Bypass -File .\Install-KeywordHighlight.ps1 -ConfigPath 'C:\Path\To\Config' -Uninstall
 ```
 
-주요 옵션은 다음과 같습니다.
-
-- `-ConfigPath`: SecureCRT 설정 폴더 경로를 자동 탐색 대신 직접 지정합니다.
-- `-Force`: SecureCRT 실행 중 경고 프롬프트와 백업 확인 프롬프트를 건너뜁니다.
-- `-Uninstall`: 설치된 `PNET-Cisco-Dark.ini`를 제거/복원하고, 존재할 경우 스크립트가 만든 가장 최근 `Default.ini` 백업도 복원합니다. 백업이 없으면 현재 `Default.ini`를 임의로 지우지 않습니다.
-- `-WhatIf`: 실제로 파일을 변경하지 않고 예정된 작업만 출력합니다.
-- `-SkipUpdate`: GitHub 원격 버전 확인과 self-update를 건너뜁니다.
-- `-RollbackVersion` (별칭 `-Version`): `v0.1.0` 또는 `0.1.0`처럼 유효한 Semantic Version을 지정합니다. 해당 Git 태그에서 `PNET-Cisco-Dark.ini`와 `CHANGELOG.md`를 확인한 뒤, 태그의 `PNET-Cisco-Dark.ini`만 설치 대상 `Keywords\PNET-Cisco-Dark.ini`에 적용합니다.
-
-스크립트는 설치/제거 작업 전에 공개 저장소의 `main` 브랜치에서 `CHANGELOG.md`의
-최신 Semantic Version을 확인합니다. `-RollbackVersion`을 지정하지 않은 경우 원격 버전이 더 높으면 설치 스크립트,
-`PNET-Cisco-Dark.ini`, `CHANGELOG.md`를 임시 위치에서 검증한 뒤 갱신하고,
-`-ConfigPath`, `-Force`, `-Uninstall`, `-WhatIf` 인자를 보존해 최신 스크립트를
-한 번만 다시 실행합니다. `-WhatIf`에서는 원격 확인과 예정 작업 출력만 수행하며
-파일 갱신이나 재실행을 하지 않습니다. 네트워크/GitHub API 오류나 원격 파일 검증
-실패는 경고로 알리고 기존 로컬 설치를 계속합니다. 자동 업데이트가 필요하지 않거나
-오프라인으로 실행하려면 `-SkipUpdate`를 사용하십시오.
-
-특정 태그의 설정으로 회귀하려면 다음과 같이 실행합니다. `-Version`도 같은 옵션의
-별칭입니다.
+특정 태그의 설정으로 회귀하려면 유효한 Semantic Version을 입력합니다. `-Version`은 `-RollbackVersion`의 별칭입니다.
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\Install-KeywordHighlight.ps1 -ConfigPath 'C:\Path\To\Config' -RollbackVersion v0.1.0
 powershell -ExecutionPolicy Bypass -File .\Install-KeywordHighlight.ps1 -ConfigPath 'C:\Path\To\Config' -Version 0.1.0 -WhatIf
 ```
 
-회귀는 `MinePacu/securecrt-cisco-iol-keyword-highlighting`의 `v<버전>` 태그에서
-`PNET-Cisco-Dark.ini`와 `CHANGELOG.md`를 가져와 CHANGELOG 버전이 요청 버전과
-정확히 일치하는지 확인합니다. 확인에 실패하거나 ini가 비어 있으면 설치를 중단하며,
-현재 저장소의 `PNET-Cisco-Dark.ini`는 덮어쓰지 않습니다. 회귀 시에도 기존 키워드
-파일과 `Default.ini` 백업 및 기본 세션 옵션 적용은 계속 수행합니다. `Default.ini`는
-버전별 회귀 대상 자산이 아니므로 현재 설치 로직의 옵션만 적용됩니다. `-RollbackVersion`
-과 `-Uninstall`은 함께 사용할 수 없습니다.
+회귀는 `MinePacu/securecrt-cisco-iol-keyword-highlighting`의 해당 `v<버전>` Git 태그에서 `PNET-Cisco-Dark.ini`와 `CHANGELOG.md`를 가져와 CHANGELOG 버전이 요청한 버전과 정확히 일치하는지 확인합니다. 태그의 검증이 실패하거나 ini가 비어 있으면 설치를 중단하며, 현재 로컬 `PNET-Cisco-Dark.ini`는 덮어쓰지 않습니다. 회귀가 유효하면 기존 키워드 파일과 `Default.ini`의 timestamp 백업을 만들고, 현재 설치 로직의 기본 세션 옵션을 `Default.ini`에 적용합니다. `Default.ini` 자체를 태그별 내용으로 회귀시키는 것은 아닙니다. `-RollbackVersion`과 `-Uninstall`은 함께 사용할 수 없습니다.
 
-설치 시 다음을 자동으로 적용합니다.
+### 설치 시 적용되는 파일과 옵션
 
-- `Config\Sessions\Default.ini`가 없으면 새로 만들지 않고 명확한 오류로 종료합니다.
+- `Sessions\Default.ini`가 없으면 새로 만들지 않고 명확한 오류로 종료합니다.
+- `Keywords\PNET-Cisco-Dark.ini`에 키워드 설정을 설치합니다.
 - `S:"Color Scheme"=Birds of Paradise`
 - `D:"Use Cursor Color"=00000001`, `D:"Cursor Color"=00FFFFFF`
 - `S:"Keyword Set"=PNET-Cisco-Dark`
 - `D:"Highlight Reverse Video"=00000000`, `D:"Highlight Bold"=00000001`, `D:"Highlight Color"=00000001`
-- 기존 키워드 파일과 `Default.ini`를 덮어쓰기 전에 각각 timestamp 백업을 만들고, `-Uninstall`에서 최신 백업을 복원합니다.
+- 기존 키워드 파일과 `Default.ini`는 덮어쓰기 전에 각각 timestamp 백업을 만듭니다. `-Uninstall`은 이 백업 중 가장 최근 파일을 복원합니다.
 
-이 스크립트는 다음을 수행하지 않습니다.
+## 제공 파일
 
-- 장비에 명령을 실행하지 않습니다.
-- 자동 업데이트 외의 네트워크나 레지스트리 작업을 수행하지 않습니다.
+- `PNET-Cisco-Dark.ini`: SecureCRT용 키워드 하이라이트 목록
+- `README.md`: 설정 범위, 설치/제거 절차, 적용 시 주의사항 및 그룹/색상 설명
+- `Install-KeywordHighlight.ps1`: Windows용 자동 설치/제거 PowerShell 스크립트
 
-스크립트 실행 전 SecureCRT를 종료하십시오. 실행 중이면 기존 확인/`-Force` 정책에 따라 경고하거나 계속 진행하지만, SecureCRT가 열린 설정을 다시 저장하면서 변경 내용을 덮어쓸 수 있습니다. 설치 후에는 SecureCRT를 다시 열어 테스트 출력으로 실제 표시를 확인해야 합니다.
+현재 저장소에는 설치 스크립트(`Install-KeywordHighlight.ps1`)가 포함되어 있지만, 별도의 라이선스 문서는 없습니다.
+
+## SecureCRT 적용 결과와 제한사항
+
+설치 스크립트는 `Keywords\PNET-Cisco-Dark.ini` 설치와 `Sessions\Default.ini`의 기본 세션 설정 적용을 함께 수행하므로, 설치 후 별도로 ini를 복사하거나 세션 옵션을 수동으로 입력할 필요가 없습니다. SecureCRT 설정 폴더와 `Keywords` 하위 폴더의 실제 위치는 버전·프로필 구성에 따라 달라질 수 있습니다. `-ConfigPath`에는 반드시 `Sessions\Default.ini`가 들어 있는 설정 폴더를 지정하십시오.
+
+스크립트는 Cisco 장비에 명령을 실행하거나 장비 설정을 변경하지 않으며, 자동 업데이트에 필요한 원격 확인 외의 네트워크나 레지스트리 작업을 수행하지 않습니다. 하이라이트는 표시 기능일 뿐이므로, 장비에 명령을 붙여 넣거나 적용하는 작업과는 별개입니다.
+
+SecureCRT가 실행 중이어도 `-Force`로 진행할 수 있지만, SecureCRT가 파일을 다시 저장하면서 변경 내용을 덮어쓸 수 있습니다. 따라서 설치·제거 전에는 SecureCRT를 종료하고, 설치 후에는 SecureCRT를 다시 시작해 저장된 출력 또는 테스트 장비에서 결과를 확인하십시오.
 
 ## 색상 코드
 
@@ -184,6 +223,4 @@ INI의 색상값은 일반적인 SecureCRT/Windows `COLORREF` 저장 방식인 `
 
 변경 중인 항목은 `CHANGELOG.md`의 `Unreleased`에 기록하고, 릴리스할 때 해당 내용을 새 버전 번호와 날짜로 확정합니다. 릴리스마다 전용 커밋을 만들고 `vX.Y.Z` 형식의 Git 태그를 함께 생성하는 것을 권장합니다.
 
-자동 업데이트는 GitHub Release나 태그 API를 호출하지 않고, 공개 저장소의 기본
-`main` 브랜치 `CHANGELOG.md`에서 가장 최근의 SemVer 항목을 기준으로 동작합니다.
-따라서 릴리스 커밋과 CHANGELOG를 먼저 갱신해야 사용자 스크립트가 새 버전을 감지합니다.
+자동 업데이트는 GitHub Release나 태그 API를 호출하지 않고, 공개 저장소의 기본 `main` 브랜치 `CHANGELOG.md`에서 가장 최근의 SemVer 항목을 기준으로 동작합니다. 따라서 릴리스 커밋과 CHANGELOG를 먼저 갱신해야 사용자 스크립트가 새 버전을 감지합니다.
