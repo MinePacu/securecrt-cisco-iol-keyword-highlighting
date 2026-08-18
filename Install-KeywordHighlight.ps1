@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     SecureCRT Cisco IOL 키워드 하이라이트 설치/제거 스크립트 (Windows 전용).
 
@@ -627,7 +627,8 @@ function Invoke-SelfUpdate {
         }
     }
     catch {
-        Write-Warning "[업데이트] 원격 업데이트를 적용하지 못했습니다: $($_.Exception.Message) 기존 로컬 설치를 계속합니다."
+        $updateErrorMessage = '[업데이트] 원격 업데이트를 적용하지 못했습니다: ' + $_.Exception.Message + ' 기존 로컬 설치를 계속합니다.'
+        Write-Warning $updateErrorMessage
     }
 }
 
@@ -886,6 +887,7 @@ try {
     exit 0
 }
 catch {
-    Write-Error "파일 작업 중 오류가 발생했습니다: $($_.Exception.Message)"
+    $fileOperationErrorMessage = '파일 작업 중 오류가 발생했습니다: ' + $_.Exception.Message
+    Write-Error $fileOperationErrorMessage
     exit 1
 }
