@@ -80,9 +80,10 @@ SecureCRT 설정 폴더를 자동으로 찾지 못했습니다. 설정 폴더 �
 | `-WhatIf` | 실제 파일 변경 없이 예정된 작업만 출력합니다. 설치 확인 프롬프트는 건너뛰지만 경로·파일·접근 권한 검증은 필요합니다. |
 | `-Uninstall` | 설치된 키워드 파일이 있으면 가장 최근 키워드 백업을 복원합니다. 키워드 백업이 없으면 현재 `PNET-Cisco-Dark.ini`를 제거할 수 있습니다. 가장 최근 `Default.ini` 백업도 있으면 복원하지만, 백업이 없을 때 현재 `Default.ini`를 임의로 삭제하거나 변경하지 않습니다. `-RollbackVersion`/`-Version`과 함께 사용할 수 없습니다. |
 | `-SkipUpdate` | GitHub 원격 버전 확인과 self-update를 건너뜁니다. 인터넷에 연결되지 않은 환경에서는 이 옵션을 사용하십시오. |
+| `-IncludePrerelease` | 자동 업데이트 확인을 GitHub Releases로 확장해 draft가 아닌 stable/prerelease 중 가장 높은 유효한 Semantic Version을 선택합니다. 선택적으로 사용하는 옵션이며, 생략하면 기존처럼 `main` 브랜치의 `CHANGELOG.md`를 확인합니다. |
 | `-RollbackVersion <버전>` | `v0.1.0` 또는 `0.1.0`처럼 유효한 Semantic Version을 입력합니다. 별칭은 `-Version`입니다. 해당 Git 태그의 `PNET-Cisco-Dark.ini`와 `CHANGELOG.md`를 검증한 뒤 태그의 ini를 설치합니다. |
 
-일반 설치/제거는 공개 저장소 `MinePacu/securecrt-cisco-iol-keyword-highlighting`의 `main` 브랜치에서 최신 `CHANGELOG.md` 버전을 확인합니다. 원격 버전이 더 높으면 설치 스크립트, `PNET-Cisco-Dark.ini`, `CHANGELOG.md`를 검증해 self-update한 뒤 원래 인자를 보존하여 다시 실행합니다. 네트워크 연결이나 원격 검증에 실패하면 경고를 표시하고 기존 로컬 설치를 계속합니다. 오프라인이거나 원격 확인을 원하지 않으면 `-SkipUpdate`를 지정하십시오. `-RollbackVersion`을 지정한 경우에는 일반 최신 버전 확인 대신 지정한 Git 태그를 검증합니다.
+일반 설치/제거는 공개 저장소 `MinePacu/securecrt-cisco-iol-keyword-highlighting`의 `main` 브랜치에서 최신 `CHANGELOG.md` 버전을 확인합니다. 원격 버전이 더 높으면 설치 스크립트, `PNET-Cisco-Dark.ini`, `CHANGELOG.md`를 검증해 self-update한 뒤 원래 인자를 보존하여 다시 실행합니다. `-IncludePrerelease`를 지정한 경우에만 GitHub Releases의 draft가 아닌 stable/prerelease 릴리스를 조회해 가장 높은 유효한 SemVer의 태그에서 세 파일을 가져옵니다. 선택한 태그와 릴리스 CHANGELOG의 버전이 다르거나 원격 검증에 실패하면 경고를 표시하고 기존 로컬 설치를 계속합니다. 오프라인이거나 원격 확인을 원하지 않으면 `-SkipUpdate`를 지정하십시오. `-RollbackVersion`을 지정한 경우에는 일반 최신 버전 확인 대신 지정한 Git 태그를 검증합니다.
 
 ### 설치, 변경 계획, 제거 명령
 
@@ -96,6 +97,12 @@ powershell -ExecutionPolicy Bypass -File .\Install-KeywordHighlight.ps1 -ConfigP
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\Install-KeywordHighlight.ps1
+```
+
+자동 업데이트 확인에 GitHub prerelease도 포함하려면 명시적으로 선택합니다. 생략하면 기존처럼 `main` 브랜치만 확인합니다.
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\Install-KeywordHighlight.ps1 -ConfigPath 'C:\Path\To\Config' -IncludePrerelease
 ```
 
 변경 계획만 확인합니다. `-WhatIf`에서는 실제 파일을 쓰거나 백업을 만들지 않습니다.
@@ -223,4 +230,4 @@ INI의 색상값은 일반적인 SecureCRT/Windows `COLORREF` 저장 방식인 `
 
 변경 중인 항목은 `CHANGELOG.md`의 `Unreleased`에 기록하고, 릴리스할 때 해당 내용을 새 버전 번호와 날짜로 확정합니다. 릴리스마다 전용 커밋을 만들고 `vX.Y.Z` 형식의 Git 태그를 함께 생성하는 것을 권장합니다.
 
-자동 업데이트는 GitHub Release나 태그 API를 호출하지 않고, 공개 저장소의 기본 `main` 브랜치 `CHANGELOG.md`에서 가장 최근의 SemVer 항목을 기준으로 동작합니다. 따라서 릴리스 커밋과 CHANGELOG를 먼저 갱신해야 사용자 스크립트가 새 버전을 감지합니다.
+기본 자동 업데이트는 GitHub Release나 태그 API를 호출하지 않고, 공개 저장소의 기본 `main` 브랜치 `CHANGELOG.md`에서 가장 최근의 SemVer 항목을 기준으로 동작합니다. `-IncludePrerelease`를 지정한 경우에만 GitHub Releases endpoint를 조회해 draft가 아닌 stable/prerelease 중 가장 높은 유효한 SemVer 릴리스를 선택합니다. 따라서 기본 동작을 사용할 때는 릴리스 커밋과 CHANGELOG를 먼저 갱신해야 사용자 스크립트가 새 버전을 감지합니다.

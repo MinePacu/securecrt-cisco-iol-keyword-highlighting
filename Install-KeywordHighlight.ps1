@@ -12,6 +12,10 @@
     갱신한 뒤 같은 인자로 이 스크립트를 다시 실행합니다. 원격 확인이나
     업데이트에 실패해도 기존 로컬 설치는 계속합니다.
 
+    -IncludePrerelease를 지정하면 GitHub Releases에서 draft가 아닌 릴리스를
+    확인하고, stable/prerelease를 포함한 가장 높은 Semantic Version을 선택합니다.
+    이 옵션은 자동 업데이트 확인에만 영향을 주며 기본적으로는 사용하지 않습니다.
+
     -RollbackVersion을 지정하면 main 브랜치 self-update를 건너뛰고 해당 Git 태그의
     PNET-Cisco-Dark.ini만 설치 대상에 적용합니다. 요청한 태그 CHANGELOG의 버전과
     일치하지 않거나 원격 ini를 검증할 수 없으면 설치하지 않습니다.
@@ -34,6 +38,11 @@
 .PARAMETER SkipUpdate
     원격 버전 확인과 self-update를 건너뜁니다.
 
+.PARAMETER IncludePrerelease
+    자동 업데이트 확인에 GitHub Releases의 prerelease를 포함합니다. draft가 아닌
+    릴리스 중 가장 높은 유효한 Semantic Version을 선택하며, 지정하지 않으면
+    main 브랜치의 CHANGELOG.md를 사용하는 기본 동작을 유지합니다.
+
 .PARAMETER RollbackVersion
     지정한 Semantic Version의 Git 태그에서 PNET-Cisco-Dark.ini를 받아
     설치 대상 SecureCRT Keywords 파일에만 적용합니다. v0.1.0 또는 0.1.0
@@ -52,6 +61,9 @@
     powershell -ExecutionPolicy Bypass -File .\Install-KeywordHighlight.ps1 -SkipUpdate
 
 .EXAMPLE
+    powershell -ExecutionPolicy Bypass -File .\Install-KeywordHighlight.ps1 -IncludePrerelease
+
+.EXAMPLE
     powershell -ExecutionPolicy Bypass -File .\Install-KeywordHighlight.ps1 -RollbackVersion v0.1.0
 #>
 
@@ -68,6 +80,9 @@ param(
 
     [Parameter()]
     [switch]$SkipUpdate,
+
+    [Parameter()]
+    [switch]$IncludePrerelease,
 
     [Parameter()]
     [Alias('Version')]
@@ -240,6 +255,51 @@ function Get-GitHubFile {
         Path  = $Path
         Bytes = $bytes
         Text  = [System.Text.UTF8Encoding]::new($false, $true).GetString($bytes)
+    }
+}
+
+function Get-HighestGitHubRelease {
+    $releasesUri = 'https://api.github.com/repos/{0}/releases?per_page=100' -f $script:UpdateRepository
+    $headers = @{
+        Accept      = 'application/vnd.github+json'
+        'User-Agent' = 'CRT-Cisco-IOL-Highlight-Installer'
+    }
+
+    $releases = Invoke-RestMethod -Uri $releasesUri -Method Get -Headers $headers -TimeoutSec 15
+    $selectedRelease = $null
+    $selectedVersion = $null
+
+    foreach ($release in @($releases)) {
+        if ($null -eq $release -or $release.draft) {
+            continue
+        }
+
+        $tagName = [string]$release.tag_name
+        if ([string]::IsNullOrWhiteSpace($tagName)) {
+            continue
+        }
+
+        try {
+            $releaseVersion = ConvertTo-SemVer -Version $tagName
+        }
+        catch {
+            continue
+        }
+
+        if ($null -eq $selectedRelease -or
+            (Compare-SemVer -Left $releaseVersion -Right $selectedVersion) -gt 0) {
+            $selectedRelease = $release
+            $selectedVersion = $releaseVersion
+        }
+    }
+
+    if ($null -eq $selectedRelease) {
+        throw 'GitHub Releases에서 유효한 Semantic Version 태그를 가진 비-draft 릴리스를 찾을 수 없습니다.'
+    }
+
+    [PSCustomObject]@{
+        TagName = [string]$selectedRelease.tag_name
+        Version = $selectedVersion
     }
 }
 
@@ -539,6 +599,9 @@ function Get-RestartArguments {
         $null = $arguments.Add('-RollbackVersion')
         $null = $arguments.Add($RollbackVersion)
     }
+    if ($IncludePrerelease) {
+        $null = $arguments.Add('-IncludePrerelease')
+    }
 
     return ,$arguments.ToArray()
 }
@@ -564,11 +627,29 @@ function Invoke-SelfUpdate {
         $localVersion = Get-ChangelogVersion -Content $localChangelogContent
 
         $remoteFiles = @{}
+        $selectedRelease = $null
+        if ($IncludePrerelease) {
+            $selectedRelease = Get-HighestGitHubRelease
+        }
+
         foreach ($fileName in $script:UpdateFileNames) {
-            $remoteFiles[$fileName] = Get-GitHubFile -Path $fileName
+            if ($IncludePrerelease) {
+                $remoteFiles[$fileName] = Get-GitHubFile -Path $fileName -Ref $selectedRelease.TagName
+            }
+            else {
+                $remoteFiles[$fileName] = Get-GitHubFile -Path $fileName
+            }
         }
 
         $remoteVersion = Get-ChangelogVersion -Content $remoteFiles['CHANGELOG.md'].Text
+        if ($IncludePrerelease -and
+            -not [string]::Equals(
+                $selectedRelease.Version.Original,
+                $remoteVersion.Original,
+                [System.StringComparison]::Ordinal)) {
+            throw "GitHub 릴리스 태그 $($selectedRelease.TagName)의 버전($($selectedRelease.Version.Original))과 CHANGELOG 버전($($remoteVersion.Original))이 일치하지 않습니다."
+        }
+
         $versionComparison = Compare-SemVer -Left $localVersion -Right $remoteVersion
         if ($versionComparison -ge 0) {
             return

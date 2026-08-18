@@ -4,6 +4,12 @@
 
 ## [Unreleased]
 
+## [0.1.3-alpha.1] - 2026-08-18
+
+### Added
+
+- `-IncludePrerelease`를 지정하면 GitHub Releases의 draft가 아닌 stable/prerelease 중 가장 높은 유효한 Semantic Version을 선택해 자동 업데이트할 수 있습니다. 기본 자동 업데이트는 계속 `main` 브랜치의 `CHANGELOG.md`를 사용합니다.
+
 ## [0.1.2] - 2026-08-18
 
 ### Added
