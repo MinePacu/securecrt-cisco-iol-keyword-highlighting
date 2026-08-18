@@ -218,7 +218,7 @@ function Get-GitHubFile {
 
     $encodedPath = (($Path -split '/') | ForEach-Object { [System.Uri]::EscapeDataString($_) }) -join '/'
     $encodedRef = [System.Uri]::EscapeDataString($Ref)
-    $uri = "https://api.github.com/repos/$($script:UpdateRepository)/contents/$encodedPath?ref=$encodedRef"
+    $uri = "https://api.github.com/repos/$($script:UpdateRepository)/contents/${encodedPath}?ref=${encodedRef}"
     $headers = @{
         Accept     = 'application/vnd.github+json'
         'User-Agent' = 'CRT-Cisco-IOL-Highlight-Installer'
