@@ -358,7 +358,7 @@ function ConvertTo-EncodedBytes {
 function New-TemporaryPath {
     param([Parameter(Mandatory = $true)][string]$Path)
 
-    $directory = Split-Path -LiteralPath $Path -Parent
+    $directory = Split-Path -LiteralPath $Path
     $fileName = [System.IO.Path]::GetFileName($Path)
     return Join-Path $directory ('.' + $fileName + '.tmp-' + [guid]::NewGuid().ToString('N'))
 }
@@ -447,7 +447,8 @@ function Get-LatestBackup {
         return $null
     }
 
-    return Get-ChildItem -LiteralPath $Directory -Filter $Pattern -File -ErrorAction SilentlyContinue |
+    return Get-ChildItem -LiteralPath $Directory -Filter $Pattern -ErrorAction SilentlyContinue |
+        Where-Object { -not $_.PSIsContainer } |
         Sort-Object Name -Descending |
         Select-Object -First 1
 }
