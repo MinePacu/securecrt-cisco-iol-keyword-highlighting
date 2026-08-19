@@ -910,6 +910,11 @@ try {
     # --- 설치 경로 ---------------------------------------------------------
     $defaultFileInfo = Get-TextFileInfo -Path $defaultIniPath
     $updatedDefaultContent = Set-IniOptions -Content $defaultFileInfo.Text -Options $iniOptions
+    $defaultIniChanged = -not [string]::Equals(
+        $defaultFileInfo.Text,
+        $updatedDefaultContent,
+        [System.StringComparison]::Ordinal
+    )
     $keywordFileExists = Test-Path -LiteralPath $destinationIniPath -PathType Leaf
 
     # 기존 동작의 확인 프롬프트를 유지하되, 새로 덮어쓰는 Default.ini도
@@ -923,10 +928,12 @@ try {
             }
         }
 
-        $confirmDefault = Read-Host '기존 Default.ini가 존재합니다. 백업 후 기본 세션 설정을 적용하시겠습니까? (Y/N)'
-        if ($confirmDefault -notmatch '^[Yy]$') {
-            Write-Host "사용자가 취소했습니다. 변경 사항이 없습니다."
-            exit 0
+        if ($defaultIniChanged) {
+            $confirmDefault = Read-Host '기존 Default.ini가 존재합니다. 백업 후 기본 세션 설정을 적용하시겠습니까? (Y/N)'
+            if ($confirmDefault -notmatch '^[Yy]$') {
+                Write-Host "사용자가 취소했습니다. 변경 사항이 없습니다."
+                exit 0
+            }
         }
     }
 
@@ -944,9 +951,11 @@ try {
         }
     }
 
-    $defaultBackupPath = Get-TimestampBackupPath -Directory $sessionsPath -FileName 'Default.ini'
-    if ($PSCmdlet.ShouldProcess($defaultIniPath, "백업 생성 ($defaultBackupPath)")) {
-        Copy-FileAtomic -Source $defaultIniPath -Destination $defaultBackupPath
+    if ($defaultIniChanged) {
+        $defaultBackupPath = Get-TimestampBackupPath -Directory $sessionsPath -FileName 'Default.ini'
+        if ($PSCmdlet.ShouldProcess($defaultIniPath, "백업 생성 ($defaultBackupPath)")) {
+            Copy-FileAtomic -Source $defaultIniPath -Destination $defaultBackupPath
+        }
     }
 
     if ($PSCmdlet.ShouldProcess($destinationIniPath, "$destinationFileName 설치")) {
@@ -958,13 +967,18 @@ try {
         }
     }
 
-    if ($PSCmdlet.ShouldProcess($defaultIniPath, '기본 세션 옵션 적용')) {
+    if ($defaultIniChanged -and $PSCmdlet.ShouldProcess($defaultIniPath, '기본 세션 옵션 적용')) {
         Write-TextFileAtomic -Path $defaultIniPath -Text $updatedDefaultContent -Encoding $defaultFileInfo.Encoding
     }
 
     if (-not $WhatIfPreference) {
         Write-Host "설치를 완료했습니다: $destinationIniPath"
-        Write-Host "기본 세션 설정을 적용했습니다: $defaultIniPath"
+        if ($defaultIniChanged) {
+            Write-Host "기본 세션 설정을 적용했습니다: $defaultIniPath"
+        }
+        else {
+            Write-Host "기본 세션 설정이 이미 최신이므로 변경하지 않았습니다: $defaultIniPath"
+        }
         Write-Host '[중요] 설정 파일 수정은 SecureCRT를 종료한 상태에서 수행하는 것이 좋습니다. -Force로 실행 중 변경을 허용할 수 있지만, SecureCRT가 변경 내용을 덮어쓸 수 있습니다.'
     }
 
