@@ -32,6 +32,24 @@ $iniPath = [System.IO.Path]::GetFullPath((Join-Path (Join-Path $PSScriptRoot '..
 $iniText = [System.IO.File]::ReadAllText($iniPath)
 $lines = $iniText -split '\r?\n'
 
+$keywordCountMatch = [System.Text.RegularExpressions.Regex]::Match(
+    $iniText,
+    '(?m)^Z:"Keyword List V2"=([0-9A-Fa-f]{8})\s*$'
+)
+Assert-True -Condition $keywordCountMatch.Success -Message 'keyword list must declare its V2 entry count'
+$declaredKeywordCount = [Convert]::ToInt32($keywordCountMatch.Groups[1].Value, 16)
+$keywordEntryCount = @(
+    $lines | Where-Object {
+        [System.Text.RegularExpressions.Regex]::IsMatch(
+            $_,
+            '^\s+"',
+            [System.Text.RegularExpressions.RegexOptions]::CultureInvariant
+        )
+    }
+).Count
+Assert-Equal -Actual $declaredKeywordCount -Expected $keywordEntryCount -Message 'Keyword List V2 entry count must include every keyword rule'
+Write-Host '[PASS] SecureCRT keyword list metadata includes every keyword rule'
+
 $regexLineModeMatches = [System.Text.RegularExpressions.Regex]::Matches(
     $iniText,
     '(?m)^\s*D:"Regex Line Mode"=([01]{8})\s*$',
@@ -482,7 +500,12 @@ $promptTranscript = @(
     'R2#conf t',
     'Enter configuration commands, one per line.',
     'R2(config)#router ospf 1',
-    'R2(config-router)#'
+    'R2(config-router)#',
+    'R9#',
+    'R9(config)#',
+    'R9(config-router)#end',
+    'RP/0/RP0/CPU0:router#show version',
+    'RP/0/RP0/CPU0:router(config-if)#'
 ) -join [Environment]::NewLine
 $lineModeOptions = [System.Text.RegularExpressions.RegexOptions]::Multiline -bor
     [System.Text.RegularExpressions.RegexOptions]::CultureInvariant
@@ -496,9 +519,11 @@ $privilegedTranscriptMatches = [System.Text.RegularExpressions.Regex]::Matches(
     $promptRules[1].Pattern,
     $lineModeOptions
 )
-Assert-Equal -Actual $configTranscriptMatches.Count -Expected 3 -Message 'config prompt rule must match each prompt prefix in a multi-line terminal transcript'
-Assert-Equal -Actual $privilegedTranscriptMatches.Count -Expected 2 -Message 'privileged prompt rule must match each prompt prefix in a multi-line terminal transcript'
+Assert-Equal -Actual $configTranscriptMatches.Count -Expected 6 -Message 'config prompt rule must match each prompt prefix in a multi-line terminal transcript'
+Assert-Equal -Actual $privilegedTranscriptMatches.Count -Expected 4 -Message 'privileged prompt rule must match each prompt prefix in a multi-line terminal transcript'
 Assert-Equal -Actual $configTranscriptMatches[2].Value -Expected 'R2(config-router)#' -Message 'config prompt rule must match nested configuration mode'
+Assert-Equal -Actual $configTranscriptMatches[4].Value -Expected 'R9(config-router)#' -Message 'config prompt rule must match nested configuration prompt with trailing command'
+Assert-Equal -Actual $privilegedTranscriptMatches[2].Value -Expected 'R9#' -Message 'privileged prompt rule must match standalone R9 prompt'
 
 Write-Host '[PASS] Cisco prompt rules match prompt prefixes across a multi-line transcript'
 
