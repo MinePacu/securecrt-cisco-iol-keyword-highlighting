@@ -4,6 +4,22 @@
 
 ## [Unreleased]
 
+## [0.1.3] - 2026-08-19
+
+### Added
+
+- 자동 업데이트가 선택적 prerelease 조회, 태그 자산·CHANGELOG 버전 검증, 다운로드·검증·설치·재시작 단계 표시를 지원하도록 통합했습니다.
+- 업데이트 흐름, `Default.ini` 보존 동작, OSPF·프롬프트 규칙, 키워드 목록 메타데이터를 검증하는 회귀 테스트를 추가했습니다.
+
+### Changed
+
+- 설치기가 `Default.ini`에서 필요한 설정만 대체하고, 인코딩·줄바꿈·idempotence를 보존하며, 원자적 백업·복원과 Windows PowerShell 5.1 호환성을 유지하도록 보강했습니다.
+
+### Fixed
+
+- OSPF Area·ABR·ASBR, 인터페이스 `Cost`·Passive interface·네트워크 타입을 SecureCRT 호환 규칙으로 색상 강조하도록 확장했습니다.
+- Cisco IOS/XR 호스트 이름, 권한 및 config 하위 모드 프롬프트를 강조하고 키워드 목록 메타데이터를 실제 규칙 수와 동기화했습니다.
+
 ## [0.1.3-alpha.8] - 2026-08-19
 
 ### Fixed
