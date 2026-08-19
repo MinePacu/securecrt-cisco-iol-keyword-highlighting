@@ -4,6 +4,12 @@
 
 ## [Unreleased]
 
+## [0.1.3-alpha.4] - 2026-08-19
+
+### Fixed
+
+- OSPF 출력에서 standalone `IA`, `It is an area border router`, `Area BACKBONE(0)`을 색상 강조하면서 기존 `Area 1` 및 숫자/IP 형식 Area 인식도 유지하도록 키워드 규칙을 보강했습니다.
+
 ## [0.1.3-alpha.2] - 2026-08-19
 
 ### Fixed
