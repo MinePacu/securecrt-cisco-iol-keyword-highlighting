@@ -618,15 +618,21 @@ function Get-RestartArguments {
 }
 
 function Invoke-SelfUpdate {
-    if ($SkipUpdate -or $RollbackVersion -or
-        [string]::Equals(
-            [Environment]::GetEnvironmentVariable($script:UpdateInProgressVariable, 'Process'),
-            '1',
-            [System.StringComparison]::Ordinal)) {
+    if ($SkipUpdate -or $RollbackVersion) {
+        return
+    }
+
+    $updateRestarted = [string]::Equals(
+        [Environment]::GetEnvironmentVariable($script:UpdateInProgressVariable, 'Process'),
+        '1',
+        [System.StringComparison]::Ordinal)
+    if ($updateRestarted) {
+        Write-Host '[업데이트] 업데이트된 설치기로 재시작되었습니다.'
         return
     }
 
     try {
+        Write-Host '[업데이트] 최신 버전을 확인하는 중입니다.'
         $localChangelogPath = Join-Path $PSScriptRoot 'CHANGELOG.md'
         if (-not (Test-Path -LiteralPath $localChangelogPath -PathType Leaf)) {
             throw "로컬 CHANGELOG.md를 찾을 수 없습니다: $localChangelogPath"
@@ -640,7 +646,11 @@ function Invoke-SelfUpdate {
         $remoteFiles = @{}
         $selectedRelease = Get-HighestGitHubRelease -IncludePrerelease:$IncludePrerelease
 
+        $downloadIndex = 0
+        $downloadCount = $script:UpdateFileNames.Count
         foreach ($fileName in $script:UpdateFileNames) {
+            $downloadIndex++
+            Write-Host "[업데이트] 다운로드 중: $fileName ($downloadIndex/$downloadCount)"
             $remoteFiles[$fileName] = Get-GitHubFile -Path $fileName -Ref $selectedRelease.TagName
         }
 
@@ -654,6 +664,7 @@ function Invoke-SelfUpdate {
 
         $versionComparison = Compare-SemVer -Left $localVersion -Right $remoteVersion
         if ($versionComparison -ge 0) {
+            Write-Host "[업데이트] 현재 버전 $($localVersion.Original)이 최신입니다."
             return
         }
 
@@ -662,6 +673,7 @@ function Invoke-SelfUpdate {
         if ($remoteFiles['PNET-Cisco-Dark.ini'].Bytes.Length -eq 0) {
             throw '원격 PNET-Cisco-Dark.ini가 비어 있습니다.'
         }
+        Write-Host '[업데이트] 원격 파일 검증이 완료되었습니다.'
 
         if ($WhatIfPreference) {
             Write-Host '[WhatIf] 설치 스크립트와 관련 파일을 갱신하고 다시 실행하는 작업을 건너뜁니다.'
@@ -671,6 +683,7 @@ function Invoke-SelfUpdate {
         $stagingDirectory = Join-Path ([System.IO.Path]::GetTempPath()) ('.crt-cisco-iol-update-' + [guid]::NewGuid().ToString('N'))
         New-Item -ItemType Directory -Path $stagingDirectory -Force | Out-Null
         try {
+            Write-Host '[업데이트] 로컬 파일 교체를 시작합니다.'
             foreach ($fileName in $script:UpdateFileNames) {
                 $stagedPath = Join-Path $stagingDirectory $fileName
                 [System.IO.File]::WriteAllBytes($stagedPath, $remoteFiles[$fileName].Bytes)
@@ -680,6 +693,7 @@ function Invoke-SelfUpdate {
                 $destinationPath = Join-Path $PSScriptRoot $fileName
                 Write-BytesAtomic -Path $destinationPath -Bytes $remoteFiles[$fileName].Bytes
             }
+            Write-Host '[업데이트] 로컬 파일 설치가 완료되었습니다.'
 
             $shellCommand = if ($PSVersionTable.PSEdition -eq 'Desktop') { 'powershell.exe' } else { 'pwsh' }
             $shellPath = (Get-Command $shellCommand -ErrorAction Stop).Path
@@ -687,6 +701,7 @@ function Invoke-SelfUpdate {
             $previousUpdateFlag = [Environment]::GetEnvironmentVariable($script:UpdateInProgressVariable, 'Process')
             [Environment]::SetEnvironmentVariable($script:UpdateInProgressVariable, '1', 'Process')
             try {
+                Write-Host '[업데이트] 업데이트된 설치기로 재시작합니다.'
                 & $shellPath -NoProfile -ExecutionPolicy Bypass -File $PSCommandPath @restartArguments
                 $restartExitCode = $LASTEXITCODE
             }

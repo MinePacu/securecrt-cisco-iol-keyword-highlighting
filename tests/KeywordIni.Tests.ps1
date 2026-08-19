@@ -31,6 +31,15 @@ function Assert-Equal {
 $iniPath = [System.IO.Path]::GetFullPath((Join-Path (Join-Path $PSScriptRoot '..') 'PNET-Cisco-Dark.ini'))
 $iniText = [System.IO.File]::ReadAllText($iniPath)
 $lines = $iniText -split '\r?\n'
+
+$regexLineModeMatches = [System.Text.RegularExpressions.Regex]::Matches(
+    $iniText,
+    '(?m)^\s*D:"Regex Line Mode"=([01]{8})\s*$',
+    [System.Text.RegularExpressions.RegexOptions]::CultureInvariant
+)
+Assert-Equal -Actual $regexLineModeMatches.Count -Expected 1 -Message 'keyword list must explicitly configure Regex Line Mode once'
+Assert-Equal -Actual $regexLineModeMatches[0].Groups[1].Value -Expected '00000001' -Message 'Regex Line Mode must be enabled for line-anchored prompt rules'
+Write-Host '[PASS] SecureCRT regex line mode is enabled for line-anchored prompt rules'
 $sectionStart = -1
 $sectionEnd = $lines.Count
 
@@ -96,6 +105,77 @@ foreach ($expectedPattern in $expectedPatterns) {
 
 Write-Host '[PASS] OSPF ASBR phrase rules are present with exact yellow highlighting'
 
+$areaRules = @(
+    @{
+        Pattern = '\bArea(?:\x20ID)?\x20+(?:[0-9]+|(?:[0-9]{1,3}\.){3}[0-9]{1,3})\b'
+        Color = '00FACE87'
+        Matches = @(
+            'Area 1',
+            '    Area 1',
+            'Area ID 1',
+            'Area 0.0.0.0',
+            '  Area ID 10.0.0.1'
+        )
+        Rejects = @('Area 1x', 'Area BACKBONE(0)')
+    },
+    @{
+        Pattern = '\bArea(?:\x20ID)?\x20+BACKBONE\(0\)'
+        Color = '00FACE87'
+        Matches = @('Area BACKBONE(0)', '    Area BACKBONE(0)', 'Area ID BACKBONE(0)')
+        Rejects = @('Area BACKBONE(1)', 'SubArea BACKBONE(0)')
+    }
+)
+
+foreach ($areaRule in $areaRules) {
+    Assert-True -Condition (-not $areaRule.Pattern.Contains('\s')) -Message "Area rule must use SecureCRT literal-space syntax: $($areaRule.Pattern)"
+    $escapedPattern = [System.Text.RegularExpressions.Regex]::Escape($areaRule.Pattern)
+    $rulePattern = '^\s*"' + $escapedPattern + '",' + $areaRule.Color + ',00000001\s*$'
+    $ruleMatches = [System.Text.RegularExpressions.Regex]::Matches(
+        $sectionText,
+        $rulePattern,
+        [System.Text.RegularExpressions.RegexOptions]::Multiline -bor
+            [System.Text.RegularExpressions.RegexOptions]::CultureInvariant
+    )
+    Assert-Equal -Actual $ruleMatches.Count -Expected 1 -Message "Area rule has exact pattern and color: $($areaRule.Pattern)"
+
+    foreach ($sample in $areaRule.Matches) {
+        Assert-True -Condition ([System.Text.RegularExpressions.Regex]::IsMatch(
+                $sample,
+                $areaRule.Pattern,
+                [System.Text.RegularExpressions.RegexOptions]::CultureInvariant
+            )) -Message "Area rule matches Cisco IOS output: $sample"
+    }
+
+    foreach ($sample in $areaRule.Rejects) {
+        Assert-True -Condition (-not [System.Text.RegularExpressions.Regex]::IsMatch(
+                $sample,
+                $areaRule.Pattern,
+                [System.Text.RegularExpressions.RegexOptions]::CultureInvariant
+            )) -Message "Area rule rejects non-matching output: $sample"
+    }
+}
+
+$areaTranscript = @(
+    '      Area BACKBONE(0)',
+    '      Area 1'
+) -join [Environment]::NewLine
+$areaTranscriptOptions = [System.Text.RegularExpressions.RegexOptions]::Multiline -bor
+    [System.Text.RegularExpressions.RegexOptions]::CultureInvariant
+$backboneTranscriptMatches = [System.Text.RegularExpressions.Regex]::Matches(
+    $areaTranscript,
+    $areaRules[1].Pattern,
+    $areaTranscriptOptions
+)
+$numericTranscriptMatches = [System.Text.RegularExpressions.Regex]::Matches(
+    $areaTranscript,
+    $areaRules[0].Pattern,
+    $areaTranscriptOptions
+)
+Assert-Equal -Actual $backboneTranscriptMatches.Count -Expected 1 -Message 'indented Area BACKBONE(0) transcript line must match'
+Assert-Equal -Actual $numericTranscriptMatches.Count -Expected 1 -Message 'indented Area 1 transcript line must match'
+
+Write-Host '[PASS] Cisco Area rules match indented BACKBONE(0), numeric, and IP output'
+
 $costSectionStart = -1
 $costSectionEnd = $lines.Count
 
@@ -125,7 +205,17 @@ for ($index = $costSectionStart + 1; $index -lt $lines.Count; $index++) {
 
 $costSectionLines = $lines[$costSectionStart..($costSectionEnd - 1)]
 $costSectionText = [string]::Join([System.Environment]::NewLine, $costSectionLines)
-$costPattern = '\b[Cc]ost\s*:\s*[0-9]+\b'
+$costFullPattern = '\b[Cc]ost\x20*:\x20*[0-9]+\b'
+$costPattern = '\b[Cc]ost\b'
+$costFullRulePattern = '^\s*"' + [System.Text.RegularExpressions.Regex]::Escape($costFullPattern) + '",0000D7FF,00000001\s*$'
+$costFullRuleMatches = [System.Text.RegularExpressions.Regex]::Matches(
+    $costSectionText,
+    $costFullRulePattern,
+    [System.Text.RegularExpressions.RegexOptions]::Multiline -bor
+        [System.Text.RegularExpressions.RegexOptions]::CultureInvariant
+)
+Assert-Equal -Actual $costFullRuleMatches.Count -Expected 1 -Message 'Cost full phrase rule has exact gold color'
+Assert-True -Condition (-not $costFullPattern.Contains('\s')) -Message 'Cost full phrase rule must use SecureCRT literal-space syntax'
 $costRulePattern = '^\s*"' + [System.Text.RegularExpressions.Regex]::Escape($costPattern) + '",0000D7FF,00000001\s*$'
 $costRuleMatches = [System.Text.RegularExpressions.Regex]::Matches(
     $costSectionText,
@@ -133,25 +223,174 @@ $costRuleMatches = [System.Text.RegularExpressions.Regex]::Matches(
     [System.Text.RegularExpressions.RegexOptions]::Multiline -bor
         [System.Text.RegularExpressions.RegexOptions]::CultureInvariant
 )
-Assert-Equal -Actual $costRuleMatches.Count -Expected 1 -Message 'Cost: numeric rule has exact gold color'
+Assert-Equal -Actual $costRuleMatches.Count -Expected 1 -Message 'Cost token rule has exact gold color'
 
-foreach ($sample in @('Cost: 1', '  Cost:   65535', 'Cost : 10', 'cost: 10')) {
-    Assert-True -Condition ([System.Text.RegularExpressions.Regex]::IsMatch(
-            $sample,
-            $costPattern,
-            [System.Text.RegularExpressions.RegexOptions]::CultureInvariant
-        )) -Message "Cost: numeric rule matches Cisco IOS output: $sample"
-}
+$costTranscript = @(
+    '      Cost: 10',
+    '      Cost : 10',
+    '      cost: 20',
+    '      cost 20'
+) -join [Environment]::NewLine
+$transcriptOptions = [System.Text.RegularExpressions.RegexOptions]::Multiline -bor
+    [System.Text.RegularExpressions.RegexOptions]::CultureInvariant
+$costTranscriptMatches = [System.Text.RegularExpressions.Regex]::Matches(
+    $costTranscript,
+    $costPattern,
+    $transcriptOptions
+)
+Assert-Equal -Actual $costTranscriptMatches.Count -Expected 4 -Message 'Cost token rule matches Cost: and Cost-space numeric transcript lines'
+Assert-True -Condition (($costTranscriptMatches | ForEach-Object { $_.Value }) -notcontains '10') -Message 'Cost token rule must not color the numeric value as a standalone match'
+$costFullTranscriptMatches = [System.Text.RegularExpressions.Regex]::Matches(
+    $costTranscript,
+    $costFullPattern,
+    $transcriptOptions
+)
+Assert-Equal -Actual $costFullTranscriptMatches.Count -Expected 3 -Message 'Cost full phrase rule matches Cost: 10 and Cost : 10 transcript lines'
+Assert-True -Condition (($costFullTranscriptMatches | ForEach-Object { $_.Value }) -contains 'Cost: 10') -Message 'Cost full phrase rule must include Cost: 10 and its numeric value'
+Assert-True -Condition (($costFullTranscriptMatches | ForEach-Object { $_.Value }) -contains 'Cost : 10') -Message 'Cost full phrase rule must include Cost : 10 and its numeric value'
 
-foreach ($sample in @('Cost 1', 'Costs: 1', 'preCost: 1', 'Cost: 1ms')) {
+foreach ($sample in @('Costs: 1', 'preCost: 1', 'Costume: 10')) {
     Assert-True -Condition (-not [System.Text.RegularExpressions.Regex]::IsMatch(
             $sample,
             $costPattern,
             [System.Text.RegularExpressions.RegexOptions]::CultureInvariant
-        )) -Message "Cost: numeric rule rejects non-matching output: $sample"
+        )) -Message "Cost token rule rejects non-matching output: $sample"
 }
 
-Write-Host '[PASS] OSPF Cost: numeric rule matches actual output with exact gold highlighting'
+Write-Host '[PASS] OSPF Cost token rule matches screenshot transcript without coloring numbers'
+
+$networkSectionStart = -1
+$networkSectionEnd = $lines.Count
+
+for ($index = 0; $index -lt $lines.Count; $index++) {
+    if ([System.Text.RegularExpressions.Regex]::IsMatch(
+            $lines[$index],
+            '^\s*"\[\*\]OSPF_NETWORK_TYPE_AND_DR_BDR",',
+            [System.Text.RegularExpressions.RegexOptions]::CultureInvariant
+        )) {
+        $networkSectionStart = $index
+        break
+    }
+}
+
+Assert-True -Condition ($networkSectionStart -ge 0) -Message 'OSPF_NETWORK_TYPE_AND_DR_BDR section must exist'
+
+for ($index = $networkSectionStart + 1; $index -lt $lines.Count; $index++) {
+    if ([System.Text.RegularExpressions.Regex]::IsMatch(
+            $lines[$index],
+            '^\s*"\[\*\]',
+            [System.Text.RegularExpressions.RegexOptions]::CultureInvariant
+        )) {
+        $networkSectionEnd = $index
+        break
+    }
+}
+
+$networkSectionLines = $lines[$networkSectionStart..($networkSectionEnd - 1)]
+$networkSectionText = [string]::Join([System.Environment]::NewLine, $networkSectionLines)
+$networkTranscript = @(
+    '  Network Type BROADCAST',
+    '  Network Type POINT_TO_POINT',
+    '  Network Type NON_BROADCAST',
+    '  Network Type POINT_TO_MULTIPOINT',
+    '  Network Type LOOPBACK',
+    '  Network Type NBMA',
+    '  State POINT_TO_POINT'
+) -join [Environment]::NewLine
+$networkPhraseRules = @(
+    @{ Pattern = '\bNetwork\x20+Type\x20+BROADCAST\b'; Color = '00FFFF00'; Matches = @('Network Type BROADCAST') },
+    @{ Pattern = '\bNetwork\x20+Type\x20+POINT_TO_POINT\b'; Color = '00FFFF00'; Matches = @('Network Type POINT_TO_POINT') },
+    @{ Pattern = '\bNetwork\x20+Type\x20+NON_BROADCAST\b'; Color = '0000A5FF'; Matches = @('Network Type NON_BROADCAST') },
+    @{ Pattern = '\bNetwork\x20+Type\x20+POINT_TO_MULTIPOINT\b'; Color = '00FFFF00'; Matches = @('Network Type POINT_TO_MULTIPOINT') },
+    @{ Pattern = '\bNetwork\x20+Type\x20+LOOPBACK\b'; Color = '00FACE87'; Matches = @('Network Type LOOPBACK') },
+    @{ Pattern = '\bNetwork\x20+Type\x20+NBMA\b'; Color = '0000A5FF'; Matches = @('Network Type NBMA') },
+    @{ Pattern = '\bState\x20+POINT_TO_POINT\b'; Color = '00FFFF00'; Matches = @('State POINT_TO_POINT') }
+)
+$networkCommandPattern = '\bip\x20+ospf\x20+network\x20+(?:broadcast|point-to-point|non-broadcast|point-to-multipoint)\b'
+Assert-True -Condition (-not $networkSectionText.Contains('\s')) -Message 'OSPF network section must use SecureCRT literal-space syntax instead of \s'
+Assert-True -Condition (-not $networkCommandPattern.Contains('\s')) -Message 'ip ospf network rule must use SecureCRT literal-space syntax'
+$networkCommandRulePattern = '^\s*"' + [System.Text.RegularExpressions.Regex]::Escape($networkCommandPattern) + '",00FFFF00,00000001\s*$'
+$networkCommandRuleMatches = [System.Text.RegularExpressions.Regex]::Matches(
+    $networkSectionText,
+    $networkCommandRulePattern,
+    [System.Text.RegularExpressions.RegexOptions]::Multiline -bor
+        [System.Text.RegularExpressions.RegexOptions]::CultureInvariant
+)
+Assert-Equal -Actual $networkCommandRuleMatches.Count -Expected 1 -Message 'ip ospf network rule has exact yellow color'
+Assert-True -Condition ([System.Text.RegularExpressions.Regex]::IsMatch(
+        'ip ospf network point-to-point',
+        $networkCommandPattern,
+        [System.Text.RegularExpressions.RegexOptions]::CultureInvariant
+    )) -Message 'ip ospf network rule matches command output with literal spaces'
+foreach ($networkPhraseRule in $networkPhraseRules) {
+    $escapedPattern = [System.Text.RegularExpressions.Regex]::Escape($networkPhraseRule.Pattern)
+    $rulePattern = '^\s*"' + $escapedPattern + '",' + $networkPhraseRule.Color + ',00000001\s*$'
+    $ruleMatches = [System.Text.RegularExpressions.Regex]::Matches(
+        $networkSectionText,
+        $rulePattern,
+        [System.Text.RegularExpressions.RegexOptions]::Multiline -bor
+            [System.Text.RegularExpressions.RegexOptions]::CultureInvariant
+    )
+    Assert-Equal -Actual $ruleMatches.Count -Expected 1 -Message "Network phrase has exact color: $($networkPhraseRule.Pattern)"
+    Assert-True -Condition (-not $networkPhraseRule.Pattern.Contains('\s')) -Message "Network phrase must use SecureCRT literal-space syntax: $($networkPhraseRule.Pattern)"
+    foreach ($sample in $networkPhraseRule.Matches) {
+        Assert-True -Condition ([System.Text.RegularExpressions.Regex]::IsMatch(
+                $sample,
+                $networkPhraseRule.Pattern,
+                [System.Text.RegularExpressions.RegexOptions]::CultureInvariant
+            )) -Message "Network phrase matches screenshot output: $sample"
+    }
+    $phraseTranscriptMatches = [System.Text.RegularExpressions.Regex]::Matches(
+        $networkTranscript,
+        $networkPhraseRule.Pattern,
+        $transcriptOptions
+    )
+    Assert-Equal -Actual $phraseTranscriptMatches.Count -Expected 1 -Message "Network phrase matches full screenshot transcript: $($networkPhraseRule.Pattern)"
+}
+$networkRules = @(
+    @{ Pattern = '\bBROADCAST\b'; Color = '00FFFF00'; Matches = @('Network Type BROADCAST'); ExpectedCount = 1 },
+    @{ Pattern = '\bPOINT_TO_POINT\b'; Color = '00FFFF00'; Matches = @('Network Type POINT_TO_POINT', 'State POINT_TO_POINT'); ExpectedCount = 2 },
+    @{ Pattern = '\bNON_BROADCAST\b'; Color = '0000A5FF'; Matches = @('Network Type NON_BROADCAST'); ExpectedCount = 1 },
+    @{ Pattern = '\bPOINT_TO_MULTIPOINT\b'; Color = '00FFFF00'; Matches = @('Network Type POINT_TO_MULTIPOINT'); ExpectedCount = 1 },
+    @{ Pattern = '\bLOOPBACK\b'; Color = '00FACE87'; Matches = @('Network Type LOOPBACK'); ExpectedCount = 1 },
+    @{ Pattern = '\bNBMA\b'; Color = '0000A5FF'; Matches = @('Network Type NBMA'); ExpectedCount = 1 }
+)
+
+foreach ($networkRule in $networkRules) {
+    $escapedPattern = [System.Text.RegularExpressions.Regex]::Escape($networkRule.Pattern)
+    $rulePattern = '^\s*"' + $escapedPattern + '",' + $networkRule.Color + ',00000001\s*$'
+    $ruleMatches = [System.Text.RegularExpressions.Regex]::Matches(
+        $networkSectionText,
+        $rulePattern,
+        [System.Text.RegularExpressions.RegexOptions]::Multiline -bor
+            [System.Text.RegularExpressions.RegexOptions]::CultureInvariant
+    )
+    Assert-Equal -Actual $ruleMatches.Count -Expected 1 -Message "Network type token has exact color: $($networkRule.Pattern)"
+
+    foreach ($sample in $networkRule.Matches) {
+        Assert-True -Condition ([System.Text.RegularExpressions.Regex]::IsMatch(
+                $sample,
+                $networkRule.Pattern,
+                [System.Text.RegularExpressions.RegexOptions]::CultureInvariant
+            )) -Message "Network type token matches screenshot output: $sample"
+    }
+
+    $networkTranscriptMatches = [System.Text.RegularExpressions.Regex]::Matches(
+        $networkTranscript,
+        $networkRule.Pattern,
+        $transcriptOptions
+    )
+    Assert-Equal -Actual $networkTranscriptMatches.Count -Expected $networkRule.ExpectedCount -Message "Network type token matches expected screenshot transcript count: $($networkRule.Pattern)"
+    foreach ($sample in @("prefix$($networkRule.Pattern -replace '\\b', '')", "$($networkRule.Pattern -replace '\\b', '')suffix")) {
+        Assert-True -Condition (-not [System.Text.RegularExpressions.Regex]::IsMatch(
+                $sample,
+                $networkRule.Pattern,
+                [System.Text.RegularExpressions.RegexOptions]::CultureInvariant
+            )) -Message "Network type token respects word boundaries: $($networkRule.Pattern)"
+    }
+}
+
+Write-Host '[PASS] OSPF network type tokens match screenshot transcript without multi-word whitespace rules'
 
 $promptSectionStart = -1
 $promptSectionEnd = $lines.Count
@@ -235,5 +474,32 @@ foreach ($promptRule in $promptRules) {
             )) -Message "Prompt rule rejects non-prompt output: $sample"
     }
 }
+
+$promptTranscript = @(
+    'R2#conf t',
+    'Enter configuration commands, one per line.',
+    'R2(config)#end',
+    'R2#conf t',
+    'Enter configuration commands, one per line.',
+    'R2(config)#router ospf 1',
+    'R2(config-router)#'
+) -join [Environment]::NewLine
+$lineModeOptions = [System.Text.RegularExpressions.RegexOptions]::Multiline -bor
+    [System.Text.RegularExpressions.RegexOptions]::CultureInvariant
+$configTranscriptMatches = [System.Text.RegularExpressions.Regex]::Matches(
+    $promptTranscript,
+    $promptRules[0].Pattern,
+    $lineModeOptions
+)
+$privilegedTranscriptMatches = [System.Text.RegularExpressions.Regex]::Matches(
+    $promptTranscript,
+    $promptRules[1].Pattern,
+    $lineModeOptions
+)
+Assert-Equal -Actual $configTranscriptMatches.Count -Expected 3 -Message 'config prompt rule must match each prompt prefix in a multi-line terminal transcript'
+Assert-Equal -Actual $privilegedTranscriptMatches.Count -Expected 2 -Message 'privileged prompt rule must match each prompt prefix in a multi-line terminal transcript'
+Assert-Equal -Actual $configTranscriptMatches[2].Value -Expected 'R2(config-router)#' -Message 'config prompt rule must match nested configuration mode'
+
+Write-Host '[PASS] Cisco prompt rules match prompt prefixes across a multi-line transcript'
 
 Write-Host '[PASS] Cisco prompt rules match IOS/XR prompts and reject ordinary output'
