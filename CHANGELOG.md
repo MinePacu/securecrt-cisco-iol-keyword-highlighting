@@ -4,6 +4,10 @@
 
 ## [Unreleased]
 
+## [0.1.3-alpha.6] - 2026-08-19
+
+### Fixed
+
 - Cisco IOS `sh ip ospf` 출력의 ASBR 설명 문구도 노란색으로 강조하도록 키워드 규칙을 보강했습니다.
 - Cisco IOS `show ip ospf interface [interface_name_number]` 출력의 `Cost: 숫자` 형식을 SecureCRT에서 안정적으로 금색 강조하도록 키워드 규칙을 조정했습니다.
 - Cisco IOS/XR의 슬래시가 포함된 호스트 이름 프롬프트와 config 하위 모드 프롬프트도 SecureCRT에서 색상 강조하도록 규칙을 보강했습니다.
