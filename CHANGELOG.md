@@ -4,6 +4,12 @@
 
 ## [Unreleased]
 
+## [0.1.3-alpha.2] - 2026-08-19
+
+### Fixed
+
+- `sh ip ospf interface [interface_name]` 출력에서 `Cost`와 `Passive interface`를 색상 강조하도록 키워드 규칙을 보강했습니다.
+
 ## [0.1.3-alpha.1] - 2026-08-18
 
 ### Added
