@@ -251,14 +251,24 @@ function Get-GitHubFile {
         throw "GitHub 파일의 Base64 내용을 해석하지 못했습니다: $Path"
     }
 
+    $text = [System.Text.UTF8Encoding]::new($false, $true).GetString($bytes)
+    if ($text.Length -gt 0 -and $text[0] -eq [char]0xFEFF) {
+        $text = $text.Substring(1)
+    }
+
     [PSCustomObject]@{
         Path  = $Path
         Bytes = $bytes
-        Text  = [System.Text.UTF8Encoding]::new($false, $true).GetString($bytes)
+        Text  = $text
     }
 }
 
 function Get-HighestGitHubRelease {
+    param(
+        [Parameter(Mandatory = $false)]
+        [switch]$IncludePrerelease
+    )
+
     $releasesUri = 'https://api.github.com/repos/{0}/releases?per_page=100' -f $script:UpdateRepository
     $headers = @{
         Accept      = 'application/vnd.github+json'
@@ -270,7 +280,8 @@ function Get-HighestGitHubRelease {
     $selectedVersion = $null
 
     foreach ($release in @($releases)) {
-        if ($null -eq $release -or $release.draft) {
+        if ($null -eq $release -or $release.draft -or
+            (-not $IncludePrerelease -and $release.prerelease)) {
             continue
         }
 
@@ -315,7 +326,7 @@ function Get-RollbackAsset {
     if ($null -eq $iniFile.Bytes -or $iniFile.Bytes.Length -eq 0 -or
         [string]::IsNullOrWhiteSpace([string]$iniFile.Text) -or
         $iniFile.Text -notmatch '(?m)^\s*S:"Keyword List"=') {
-        throw "GitHub 태그 $tagRef의 PNET-Cisco-Dark.ini가 비어 있거나 유효한 INI가 아닙니다."
+        throw "GitHub 태그 ${tagRef}의 PNET-Cisco-Dark.ini가 비어 있거나 유효한 INI가 아닙니다."
     }
 
     $changelogVersion = Get-ChangelogVersion -Content $changelogFile.Text
@@ -323,7 +334,7 @@ function Get-RollbackAsset {
             $Version.Original,
             $changelogVersion.Original,
             [System.StringComparison]::Ordinal)) {
-        throw "GitHub 태그 $tagRef의 CHANGELOG 버전($($changelogVersion.Original))이 요청한 버전($($Version.Original))과 일치하지 않습니다."
+        throw "GitHub 태그 ${tagRef}의 CHANGELOG 버전($($changelogVersion.Original))이 요청한 버전($($Version.Original))과 일치하지 않습니다."
     }
 
     [PSCustomObject]@{
@@ -627,26 +638,17 @@ function Invoke-SelfUpdate {
         $localVersion = Get-ChangelogVersion -Content $localChangelogContent
 
         $remoteFiles = @{}
-        $selectedRelease = $null
-        if ($IncludePrerelease) {
-            $selectedRelease = Get-HighestGitHubRelease
-        }
+        $selectedRelease = Get-HighestGitHubRelease -IncludePrerelease:$IncludePrerelease
 
         foreach ($fileName in $script:UpdateFileNames) {
-            if ($IncludePrerelease) {
-                $remoteFiles[$fileName] = Get-GitHubFile -Path $fileName -Ref $selectedRelease.TagName
-            }
-            else {
-                $remoteFiles[$fileName] = Get-GitHubFile -Path $fileName
-            }
+            $remoteFiles[$fileName] = Get-GitHubFile -Path $fileName -Ref $selectedRelease.TagName
         }
 
         $remoteVersion = Get-ChangelogVersion -Content $remoteFiles['CHANGELOG.md'].Text
-        if ($IncludePrerelease -and
-            -not [string]::Equals(
-                $selectedRelease.Version.Original,
-                $remoteVersion.Original,
-                [System.StringComparison]::Ordinal)) {
+        if (-not [string]::Equals(
+            $selectedRelease.Version.Original,
+            $remoteVersion.Original,
+            [System.StringComparison]::Ordinal)) {
             throw "GitHub 릴리스 태그 $($selectedRelease.TagName)의 버전($($selectedRelease.Version.Original))과 CHANGELOG 버전($($remoteVersion.Original))이 일치하지 않습니다."
         }
 
@@ -879,7 +881,7 @@ try {
         if ($latestKeywordBackup) {
             if ($PSCmdlet.ShouldProcess($destinationIniPath, "$($latestKeywordBackup.Name)에서 $destinationFileName 복원")) {
                 Restore-BackupAtomic -BackupPath $latestKeywordBackup.FullName -DestinationPath $destinationIniPath
-                Write-Host "키워드 파일 제거를 완료했습니다. 가장 최근 백업($($latestKeywordBackup.Name))을 $destinationFileName로 복원했습니다."
+                Write-Host "키워드 파일 제거를 완료했습니다. 가장 최근 백업($($latestKeywordBackup.Name))을 ${destinationFileName}로 복원했습니다."
             }
         }
         elseif (Test-Path -LiteralPath $destinationIniPath -PathType Leaf) {
@@ -888,7 +890,7 @@ try {
             }
         }
         elseif (-not $WhatIfPreference) {
-            Write-Host "[정보] $destinationFileName의 복원할 백업 파일이 없습니다. 현재 파일이 있으면 제거만 수행했습니다."
+            Write-Host "[정보] ${destinationFileName}의 복원할 백업 파일이 없습니다. 현재 파일이 있으면 제거만 수행했습니다."
         }
 
         $latestDefaultBackup = Get-LatestBackup -Directory $sessionsPath -Pattern 'Default.ini.bak-*'
@@ -914,7 +916,7 @@ try {
     # 같은 정책으로 확인한다. -WhatIf에서는 확인 없이 계획만 출력한다.
     if (-not $Force -and -not $WhatIfPreference) {
         if ($keywordFileExists) {
-            $confirmKeyword = Read-Host "기존 $destinationFileName가 존재합니다. 백업 후 덮어쓰시겠습니까? (Y/N)"
+            $confirmKeyword = Read-Host "기존 ${destinationFileName}가 존재합니다. 백업 후 덮어쓰시겠습니까? (Y/N)"
             if ($confirmKeyword -notmatch '^[Yy]$') {
                 Write-Host "사용자가 취소했습니다. 변경 사항이 없습니다."
                 exit 0
