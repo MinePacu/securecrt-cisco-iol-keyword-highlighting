@@ -152,3 +152,88 @@ foreach ($sample in @('Cost 1', 'Costs: 1', 'preCost: 1', 'Cost: 1ms')) {
 }
 
 Write-Host '[PASS] OSPF Cost: numeric rule matches actual output with exact gold highlighting'
+
+$promptSectionStart = -1
+$promptSectionEnd = $lines.Count
+
+for ($index = 0; $index -lt $lines.Count; $index++) {
+    if ([System.Text.RegularExpressions.Regex]::IsMatch(
+            $lines[$index],
+            '^\s*"\[\*\]PROMPTS",',
+            [System.Text.RegularExpressions.RegexOptions]::CultureInvariant
+        )) {
+        $promptSectionStart = $index
+        break
+    }
+}
+
+Assert-True -Condition ($promptSectionStart -ge 0) -Message 'PROMPTS section must exist'
+
+for ($index = $promptSectionStart + 1; $index -lt $lines.Count; $index++) {
+    if ([System.Text.RegularExpressions.Regex]::IsMatch(
+            $lines[$index],
+            '^\s*"\[\*\]',
+            [System.Text.RegularExpressions.RegexOptions]::CultureInvariant
+        )) {
+        $promptSectionEnd = $index
+        break
+    }
+}
+
+$promptSectionLines = $lines[$promptSectionStart..($promptSectionEnd - 1)]
+$promptSectionText = [string]::Join([System.Environment]::NewLine, $promptSectionLines)
+$promptRules = @(
+    @{
+        Pattern = '^[A-Za-z0-9_.:/-]+\(config(?:-[^)]+)?\)#'
+        Color = '0000FFFF'
+        Matches = @(
+            'Router(config)#',
+            'Router(config-if)#',
+            'RP/0/RP0/CPU0:router(config)#',
+            'RP/0/RP0/CPU0:router(config-if)#'
+        )
+        Rejects = @('  Router(config)#', 'show ip route #')
+    },
+    @{
+        Pattern = '^[A-Za-z0-9_.:/-]+#'
+        Color = '00FFFF00'
+        Matches = @('Router#', 'RP/0/RP0/CPU0:router#')
+        Rejects = @('  Router#', 'show ip route #')
+    },
+    @{
+        Pattern = '^[A-Za-z0-9_.:/-]+>'
+        Color = '00C0C0C0'
+        Matches = @('Router>', 'RP/0/RP0/CPU0:router>')
+        Rejects = @('  Router>', 'show ip route >')
+    }
+)
+
+foreach ($promptRule in $promptRules) {
+    $escapedPattern = [System.Text.RegularExpressions.Regex]::Escape($promptRule.Pattern)
+    $rulePattern = '^\s*"' + $escapedPattern + '",' + $promptRule.Color + ',00000001\s*$'
+    $ruleMatches = [System.Text.RegularExpressions.Regex]::Matches(
+        $promptSectionText,
+        $rulePattern,
+        [System.Text.RegularExpressions.RegexOptions]::Multiline -bor
+            [System.Text.RegularExpressions.RegexOptions]::CultureInvariant
+    )
+    Assert-Equal -Actual $ruleMatches.Count -Expected 1 -Message "Prompt rule has exact pattern and color: $($promptRule.Pattern)"
+
+    foreach ($sample in $promptRule.Matches) {
+        Assert-True -Condition ([System.Text.RegularExpressions.Regex]::IsMatch(
+                $sample,
+                $promptRule.Pattern,
+                [System.Text.RegularExpressions.RegexOptions]::CultureInvariant
+            )) -Message "Prompt rule matches Cisco CLI prompt: $sample"
+    }
+
+    foreach ($sample in $promptRule.Rejects) {
+        Assert-True -Condition (-not [System.Text.RegularExpressions.Regex]::IsMatch(
+                $sample,
+                $promptRule.Pattern,
+                [System.Text.RegularExpressions.RegexOptions]::CultureInvariant
+            )) -Message "Prompt rule rejects non-prompt output: $sample"
+    }
+}
+
+Write-Host '[PASS] Cisco prompt rules match IOS/XR prompts and reject ordinary output'
