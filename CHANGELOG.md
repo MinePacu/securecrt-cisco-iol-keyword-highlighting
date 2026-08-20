@@ -4,6 +4,15 @@
 
 ## [Unreleased]
 
+## [0.1.4-alpha.1] - 2026-08-20
+
+### Fixed
+
+- Cisco `show ip route` 출력의 프로토콜 코드와 `[AD/Metric]` 값을 SecureCRT에서 색상 강조하도록 보강했습니다.
+- OSPF Neighbor가 `LOADING`에서 `FULL`로 전환되거나 `state FULL`로 동기화되는 로그의 `FULL` 상태를 색상 강조하도록 보강했습니다.
+- Cisco `show ip protocols` 출력의 `Redistributing:` 항목과 OSPF의 `External Routes from`, EIGRP/RIP 및 주요 재분배 소스·연속 행을 색상 강조하도록 보강했습니다.
+- Cisco `show ip protocols` 출력의 EIGRP `Distance: internal ... external ...` 및 RIP·OSPF·ODR의 `Distance: (default is ...)` 값을 색상 강조하도록 보강했습니다.
+
 ## [0.1.3] - 2026-08-19
 
 ### Added

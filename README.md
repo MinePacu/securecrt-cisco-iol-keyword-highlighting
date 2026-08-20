@@ -194,6 +194,8 @@ INI의 색상값은 일반적인 SecureCRT/Windows `COLORREF` 저장 방식인 `
 | `OSPF_SPF_AND_CONFIG` | SPF 실행·타이머, `ip ospf ... area`, network area, passive-interface, default-information, area 설정 |
 | `VLAN_TRUNK_AND_LAYER2` | trunk/access, VLAN/Vl 번호, native VLAN, dot1q/802.1Q |
 | `INTERFACES_ADDRESSES_AND_IDENTIFIERS` | 장문·축약 인터페이스 이름, IPv4 주소/프리픽스, Cisco dotted MAC 및 콜론 형식 MAC |
+| `ROUTING_REDISTRIBUTION` | `show ip protocols`의 `Redistributing:` 필드, OSPF `External Routes from`, EIGRP/RIP 및 BGP·IS-IS·IGRP·connected·static 재분배 소스 |
+| `ROUTING_PROTOCOL_DISTANCE` | `show ip protocols`의 EIGRP `Distance: internal ... external ...` 및 RIP·OSPF·ODR `Distance: (default is ...)` 값 |
 | `ROUTING_PROTOCOLS_AND_MISC` | EIGRP/BGP/RIP/HSRP/OSPF/MST/PVST/STP, route-map/prefix-list/ACL, SSH/Telnet/TFTP/NTP/SNMP, 표 헤더 |
 | `PROMPTS` | 설정 모드 프롬프트(`#`), privileged EXEC 프롬프트(`#`), 사용자 EXEC 프롬프트(`>`) |
 
