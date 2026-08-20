@@ -386,7 +386,7 @@ $routeLegendRuleSpecs = @(
     @{ Pattern = '\b(?:N1|E1)\x20+-'; Color = '0000FFFF' },
     @{ Pattern = '\b(?:N2|E2)\x20+-'; Color = '00FFBF00' },
     @{ Pattern = '\b(?:i|su|L1|L2|ia)\x20+-'; Color = '00C1B6FF' },
-    @{ Pattern = '(?:\*|U|o|P|H|a|\+|%|p|l)\x20+-'; Color = '00E22B8A' }
+    @{ Pattern = '(?:\*|U|o|P|H|a|\+|%|p|l)\x20+-'; Color = '00FFFFFF' }
 )
 $routeEntryRuleSpecs = @(
     @{ Pattern = '^\x20*D\x20+EX(?=\x20+(?:[0-9]{1,3}\.){3}[0-9]{1,3}(?:/[0-9]{1,2})?\b)'; Color = '000000FF' },
@@ -404,11 +404,12 @@ $routeEntryRuleSpecs = @(
     @{ Pattern = '^\x20*B(?=\x20+(?:[0-9]{1,3}\.){3}[0-9]{1,3}(?:/[0-9]{1,2})?\b)'; Color = '00FF0000' },
     @{ Pattern = '^\x20*D(?=\x20+(?:[0-9]{1,3}\.){3}[0-9]{1,3}(?:/[0-9]{1,2})?\b)'; Color = '00B469FF' },
     @{ Pattern = '^\x20*O(?=\x20+(?:[0-9]{1,3}\.){3}[0-9]{1,3}(?:/[0-9]{1,2})?\b)'; Color = '00FACE87' },
-    @{ Pattern = '^\x20*(?:\*|U|o|P|H|a|\+|%|p|l)(?=\x20+(?:[0-9]{1,3}\.){3}[0-9]{1,3}(?:/[0-9]{1,2})?\b)'; Color = '00E22B8A' }
+    @{ Pattern = '^\x20*(?:\*|U|o|P|H|a|\+|%|p|l)(?=\x20+(?:[0-9]{1,3}\.){3}[0-9]{1,3}(?:/[0-9]{1,2})?\b)'; Color = '00FFFFFF' }
 )
 $routeRuleSpecs = @($routeMetricRule) + $routeLegendRuleSpecs + $routeEntryRuleSpecs
 
 Assert-True -Condition (-not $routeSectionText.Contains('\s')) -Message 'Routing table rules must use SecureCRT literal-space syntax instead of \s'
+Assert-True -Condition (-not $routeSectionText.Contains('00E22B8A')) -Message 'Routing table modifier rules must not use the low-contrast purple color'
 foreach ($routeRule in $routeRuleSpecs) {
     $escapedPattern = [System.Text.RegularExpressions.Regex]::Escape($routeRule.Pattern)
     $rulePattern = '^\s*"' + $escapedPattern + '",' + $routeRule.Color + ',00000001\s*$'
@@ -548,6 +549,105 @@ foreach ($invalidMetric in @('[170]', '[170/]', '[foo/bar]', '[1/2/3]')) {
 
 Write-Host '[PASS] Routing table protocol codes and AD/Metric values match screenshot-style output without one-letter false positives'
 
+$routeSummarySectionStart = -1
+$routeSummarySectionEnd = $lines.Count
+
+for ($index = 0; $index -lt $lines.Count; $index++) {
+    if ([System.Text.RegularExpressions.Regex]::IsMatch(
+            $lines[$index],
+            '^\s*"\[\*\]ROUTING_TABLE_SUMMARY_DISCARD",',
+            [System.Text.RegularExpressions.RegexOptions]::CultureInvariant
+        )) {
+        $routeSummarySectionStart = $index
+        break
+    }
+}
+
+Assert-True -Condition ($routeSummarySectionStart -ge 0) -Message 'ROUTING_TABLE_SUMMARY_DISCARD section must exist'
+
+for ($index = $routeSummarySectionStart + 1; $index -lt $lines.Count; $index++) {
+    if ([System.Text.RegularExpressions.Regex]::IsMatch(
+            $lines[$index],
+            '^\s*"\[\*\]',
+            [System.Text.RegularExpressions.RegexOptions]::CultureInvariant
+        )) {
+        $routeSummarySectionEnd = $index
+        break
+    }
+}
+
+$routeSummarySectionLines = $lines[$routeSummarySectionStart..($routeSummarySectionEnd - 1)]
+$routeSummarySectionText = [string]::Join([System.Environment]::NewLine, $routeSummarySectionLines)
+$routeSummaryRuleSpecs = @(
+    @{ Pattern = 'is\x20+a\x20+summary(?=,\x20+[0-9]{2}:[0-9]{2}:[0-9]{2},\x20+Null[0-9]+\b)'; Color = '00FACE87' },
+    @{ Pattern = '\bNull[0-9]+\b'; Color = '0000FFFF' }
+)
+
+Assert-True -Condition (-not $routeSummarySectionText.Contains('\s')) -Message 'Route summary rules must use SecureCRT literal-space syntax instead of \s'
+foreach ($summaryRule in $routeSummaryRuleSpecs) {
+    $escapedPattern = [System.Text.RegularExpressions.Regex]::Escape($summaryRule.Pattern)
+    $rulePattern = '^\s*"' + $escapedPattern + '",' + $summaryRule.Color + ',00000001\s*$'
+    $ruleMatches = [System.Text.RegularExpressions.Regex]::Matches(
+        $routeSummarySectionText,
+        $rulePattern,
+        [System.Text.RegularExpressions.RegexOptions]::Multiline -bor
+            [System.Text.RegularExpressions.RegexOptions]::CultureInvariant
+    )
+    Assert-Equal -Actual $ruleMatches.Count -Expected 1 -Message "Route summary rule has exact pattern and color: $($summaryRule.Pattern)"
+}
+
+$routeSummaryTranscript = @(
+    'O        172.16.0.0/24 is a summary, 00:03:18, Null0',
+    'D       192.168.2.0/24 is a summary, 00:06:48, Null42'
+) -join [Environment]::NewLine
+$routeSummaryTranscriptOptions = [System.Text.RegularExpressions.RegexOptions]::Multiline -bor
+    [System.Text.RegularExpressions.RegexOptions]::CultureInvariant
+$summaryMatches = [System.Text.RegularExpressions.Regex]::Matches(
+    $routeSummaryTranscript,
+    $routeSummaryRuleSpecs[0].Pattern,
+    $routeSummaryTranscriptOptions
+)
+$nullDiscardMatches = [System.Text.RegularExpressions.Regex]::Matches(
+    $routeSummaryTranscript,
+    $routeSummaryRuleSpecs[1].Pattern,
+    $routeSummaryTranscriptOptions
+)
+Assert-Equal -Actual $summaryMatches.Count -Expected 2 -Message 'Summary rule must match OSPF and EIGRP summary route lines'
+Assert-True -Condition (($summaryMatches | ForEach-Object { $_.Value }) -contains 'is a summary') -Message 'Summary rule must highlight the summary phrase'
+Assert-Equal -Actual $nullDiscardMatches.Count -Expected 2 -Message 'Null discard rule must match Null0 and multi-digit Null interfaces'
+Assert-True -Condition (($nullDiscardMatches | ForEach-Object { $_.Value }) -contains 'Null0') -Message 'Null discard rule must match the OSPF Null0 next hop'
+Assert-True -Condition (($nullDiscardMatches | ForEach-Object { $_.Value }) -contains 'Null42') -Message 'Null discard rule must match a numeric Null next hop variant'
+
+foreach ($invalidSummaryLine in @(
+        'This is a summary',
+        'O        172.16.0.0/24 is a summary, 00:03:18, Null',
+        'O        172.16.0.0/24 is a summary, 00:03:18, NullX'
+    )) {
+    Assert-True -Condition (-not [System.Text.RegularExpressions.Regex]::IsMatch(
+            $invalidSummaryLine,
+            $routeSummaryRuleSpecs[0].Pattern,
+            [System.Text.RegularExpressions.RegexOptions]::CultureInvariant
+        )) -Message "Summary rule must reject non-route or malformed summary output: $invalidSummaryLine"
+}
+
+foreach ($invalidNull in @('Null', 'NullX', 'Null-0', 'Null0X')) {
+    Assert-True -Condition (-not [System.Text.RegularExpressions.Regex]::IsMatch(
+            $invalidNull,
+            $routeSummaryRuleSpecs[1].Pattern,
+            [System.Text.RegularExpressions.RegexOptions]::CultureInvariant
+        )) -Message "Null discard rule must reject malformed Null next hop: $invalidNull"
+}
+
+foreach ($nonRouteNullLine in @('This is a summary', 'show ip route', 'Null')) {
+    Assert-True -Condition (-not [System.Text.RegularExpressions.Regex]::IsMatch(
+            $nonRouteNullLine,
+            $routeSummaryRuleSpecs[1].Pattern,
+            [System.Text.RegularExpressions.RegexOptions]::CultureInvariant
+        )) -Message "Null discard rule must reject non-route output without a numeric Null next hop: $nonRouteNullLine"
+}
+
+Write-Host '[PASS] OSPF and EIGRP summary routes highlight summary and Null numeric discard next hops'
+
 $networkSectionStart = -1
 $networkSectionEnd = $lines.Count
 
@@ -680,6 +780,103 @@ foreach ($networkRule in $networkRules) {
 }
 
 Write-Host '[PASS] OSPF network type tokens match screenshot transcript without multi-word whitespace rules'
+
+$virtualLinkSectionStart = -1
+$virtualLinkSectionEnd = $lines.Count
+
+for ($index = 0; $index -lt $lines.Count; $index++) {
+    if ([System.Text.RegularExpressions.Regex]::IsMatch(
+            $lines[$index],
+            '^\s*"\[\*\]OSPF_VIRTUAL_LINKS",',
+            [System.Text.RegularExpressions.RegexOptions]::CultureInvariant
+        )) {
+        $virtualLinkSectionStart = $index
+        break
+    }
+}
+
+Assert-True -Condition ($virtualLinkSectionStart -ge 0) -Message 'OSPF_VIRTUAL_LINKS section must exist'
+
+for ($index = $virtualLinkSectionStart + 1; $index -lt $lines.Count; $index++) {
+    if ([System.Text.RegularExpressions.Regex]::IsMatch(
+            $lines[$index],
+            '^\s*"\[\*\]',
+            [System.Text.RegularExpressions.RegexOptions]::CultureInvariant
+        )) {
+        $virtualLinkSectionEnd = $index
+        break
+    }
+}
+
+$virtualLinkSectionLines = $lines[$virtualLinkSectionStart..($virtualLinkSectionEnd - 1)]
+$virtualLinkSectionText = [string]::Join([System.Environment]::NewLine, $virtualLinkSectionLines)
+$virtualLinkRuleSpecs = @(
+    @{ Pattern = '\bTransit\x20+area\b'; Color = '00FACE87' },
+    @{ Pattern = '\barea\x20+(?:[0-9]+|(?:[0-9]{1,3}\.){3}[0-9]{1,3})\b(?=,\x20+via\x20+interface\b)'; Color = '0000FFFF' }
+)
+
+Assert-True -Condition (-not $virtualLinkSectionText.Contains('\s')) -Message 'OSPF virtual-link rules must use SecureCRT literal-space syntax instead of \s'
+Assert-True -Condition (-not $virtualLinkSectionText.Contains('(?<=')) -Message 'OSPF virtual-link rules must not depend on undocumented lookbehind'
+foreach ($virtualLinkRule in $virtualLinkRuleSpecs) {
+    $escapedPattern = [System.Text.RegularExpressions.Regex]::Escape($virtualLinkRule.Pattern)
+    $rulePattern = '^\s*"' + $escapedPattern + '",' + $virtualLinkRule.Color + ',00000001\s*$'
+    $ruleMatches = [System.Text.RegularExpressions.Regex]::Matches(
+        $virtualLinkSectionText,
+        $rulePattern,
+        [System.Text.RegularExpressions.RegexOptions]::Multiline -bor
+            [System.Text.RegularExpressions.RegexOptions]::CultureInvariant
+    )
+    Assert-Equal -Actual $ruleMatches.Count -Expected 1 -Message "OSPF virtual-link rule has exact pattern and color: $($virtualLinkRule.Pattern)"
+}
+
+$virtualLinkTranscript = @(
+    'Virtual Link to router 192.168.101.2 is up',
+    'Transit area 1, via interface Ethernet0/1, Cost of using 128',
+    'Virtual Link to router 192.168.102.2 is up',
+    'Transit area 0.0.0.1, via interface Ethernet0, Cost of using 10'
+) -join [Environment]::NewLine
+$transitAreaMatches = [System.Text.RegularExpressions.Regex]::Matches(
+    $virtualLinkTranscript,
+    $virtualLinkRuleSpecs[0].Pattern,
+    $transcriptOptions
+)
+$transitAreaValueMatches = [System.Text.RegularExpressions.Regex]::Matches(
+    $virtualLinkTranscript,
+    $virtualLinkRuleSpecs[1].Pattern,
+    $transcriptOptions
+)
+Assert-Equal -Actual $transitAreaMatches.Count -Expected 2 -Message 'Transit area phrase must match integer and dotted-area virtual-link output'
+Assert-True -Condition (($transitAreaMatches | ForEach-Object { $_.Value }) -contains 'Transit area') -Message 'Transit area rule must highlight the full phrase'
+Assert-Equal -Actual $transitAreaValueMatches.Count -Expected 2 -Message 'Transit area value rule must match integer and dotted area IDs'
+Assert-True -Condition (($transitAreaValueMatches | ForEach-Object { $_.Value }) -contains 'area 1') -Message 'Transit area value rule must match integer area 1'
+Assert-True -Condition (($transitAreaValueMatches | ForEach-Object { $_.Value }) -contains 'area 0.0.0.1') -Message 'Transit area value rule must match dotted area 0.0.0.1'
+
+foreach ($invalidVirtualLinkLine in @(
+        'Transit areas 1, via interface Ethernet0/1',
+        'Transit area X, via interface Ethernet0/1',
+        'Transit area one, via interface Ethernet0/1',
+        'Transit area 0.0.0, via interface Ethernet0',
+        'Transit area 1 without an interface'
+    )) {
+    Assert-True -Condition (-not [System.Text.RegularExpressions.Regex]::IsMatch(
+            $invalidVirtualLinkLine,
+            $virtualLinkRuleSpecs[1].Pattern,
+            [System.Text.RegularExpressions.RegexOptions]::CultureInvariant
+        )) -Message "Transit area value rule must reject malformed or incomplete virtual-link output: $invalidVirtualLinkLine"
+}
+
+foreach ($nonTransitLine in @(
+        'Area 1, via interface Ethernet0/1',
+        'Transit region 1, via interface Ethernet0/1'
+    )) {
+    Assert-True -Condition (-not [System.Text.RegularExpressions.Regex]::IsMatch(
+            $nonTransitLine,
+            $virtualLinkRuleSpecs[0].Pattern,
+            [System.Text.RegularExpressions.RegexOptions]::CultureInvariant
+        )) -Message "Transit area phrase rule must reject non-Transit output: $nonTransitLine"
+}
+
+Write-Host '[PASS] OSPF virtual-link Transit area phrases and integer/dotted area IDs match Cisco output'
 
 $promptSectionStart = -1
 $promptSectionEnd = $lines.Count

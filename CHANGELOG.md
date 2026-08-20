@@ -4,6 +4,14 @@
 
 ## [Unreleased]
 
+## [0.1.4-alpha.3] - 2026-08-20
+
+### Fixed
+
+- 어두운 터미널 배경에서 가독성이 낮았던 `show ip route` 후보 기본 경로 및 정적·특수 경로 modifier의 색상을 고대비 흰색으로 조정했습니다.
+- Cisco `show ip route`의 OSPF·EIGRP 요약 경로에서 `is a summary` 문구와 `Null0` 등 숫자형 Null discard next-hop을 별도 색상으로 강조하도록 보강했습니다.
+- Cisco `show ip ospf virtual-links` 출력의 `Transit area 1` 및 `Transit area 0.0.0.1` 형식 문구와 transit area ID를 별도 색상으로 강조하도록 보강했습니다.
+
 ## [0.1.4-alpha.2] - 2026-08-20
 
 ### Fixed
