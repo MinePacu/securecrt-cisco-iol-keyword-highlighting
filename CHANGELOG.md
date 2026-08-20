@@ -4,6 +4,12 @@
 
 ## [Unreleased]
 
+## [0.1.4-alpha.2] - 2026-08-20
+
+### Fixed
+
+- Cisco `show ip route`의 범례와 실제 경로 행을 L/C/S·S*/R/I/M/B/D/EX/O 및 OSPF·IS-IS 세부 코드별로 서로 다른 색상으로 구분하도록 보강했습니다.
+
 ## [0.1.4-alpha.1] - 2026-08-20
 
 ### Fixed

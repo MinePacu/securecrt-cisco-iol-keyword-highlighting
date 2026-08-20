@@ -370,24 +370,43 @@ for ($index = $routeSectionStart + 1; $index -lt $lines.Count; $index++) {
 
 $routeSectionLines = $lines[$routeSectionStart..($routeSectionEnd - 1)]
 $routeSectionText = [string]::Join([System.Environment]::NewLine, $routeSectionLines)
-$routeRuleSpecs = @(
-    @{ Pattern = '\[[0-9]+/[0-9]+\]'; Color = '0000D7FF' },
-    @{ Pattern = '\b(?:L|C|O)\x20+-'; Color = '0032CD32' },
-    @{ Pattern = '\b(?:S|R|M|B|D|EX)\x20+-'; Color = '00B469FF' },
-    @{ Pattern = '\bIA\x20+-'; Color = '00FACE87' },
-    @{ Pattern = '\b(?:N1|E1)\x20+-'; Color = '0000A5FF' },
-    @{ Pattern = '\b(?:N2|E2)\x20+-'; Color = '0000FFFF' },
-    @{ Pattern = '\b(?:i|su|L1|L2|ia)\x20+-'; Color = '00FACE87' },
-    @{ Pattern = '(?:\*|U|o|P|H|a|\+|%|p|l)\x20+-'; Color = '00EE82EE' },
-    @{ Pattern = '^\x20*D\x20+EX(?=\x20+(?:[0-9]{1,3}\.){3}[0-9]{1,3}(?:/[0-9]{1,2})?\b)'; Color = '00B469FF' },
-    @{ Pattern = '^\x20*O\x20+IA(?=\x20+(?:[0-9]{1,3}\.){3}[0-9]{1,3}(?:/[0-9]{1,2})?\b)'; Color = '00FACE87' },
-    @{ Pattern = '^\x20*O\x20+(?:E1|N1)(?=\x20+(?:[0-9]{1,3}\.){3}[0-9]{1,3}(?:/[0-9]{1,2})?\b)'; Color = '0000A5FF' },
-    @{ Pattern = '^\x20*O\x20+(?:E2|N2)(?=\x20+(?:[0-9]{1,3}\.){3}[0-9]{1,3}(?:/[0-9]{1,2})?\b)'; Color = '0000FFFF' },
-    @{ Pattern = '^\x20*i\x20+(?:su|L1|L2|ia)(?=\x20+(?:[0-9]{1,3}\.){3}[0-9]{1,3}(?:/[0-9]{1,2})?\b)'; Color = '00FACE87' },
-    @{ Pattern = '^\x20*(?:L|C|O)(?=\x20+(?:[0-9]{1,3}\.){3}[0-9]{1,3}(?:/[0-9]{1,2})?\b)'; Color = '0032CD32' },
-    @{ Pattern = '^\x20*(?:S\*|S|R|M|B|D)(?=\x20+(?:[0-9]{1,3}\.){3}[0-9]{1,3}(?:/[0-9]{1,2})?\b)'; Color = '00B469FF' },
-    @{ Pattern = '^\x20*(?:\*|U|o|P|H|a|\+|%|p|l)(?=\x20+(?:[0-9]{1,3}\.){3}[0-9]{1,3}(?:/[0-9]{1,2})?\b)'; Color = '00EE82EE' }
+$routeMetricRule = @{ Pattern = '\[[0-9]+/[0-9]+\]'; Color = '0000D7FF' }
+$routeLegendRuleSpecs = @(
+    @{ Pattern = '\bL\x20+-'; Color = '0032CD32' },
+    @{ Pattern = '\bC\x20+-'; Color = '00FFFF00' },
+    @{ Pattern = '\bS\*?\x20+-'; Color = '0000D7FF' },
+    @{ Pattern = '\bR\x20+-'; Color = '00FF00FF' },
+    @{ Pattern = '\bI\x20+-'; Color = '0000A5FF' },
+    @{ Pattern = '\bM\x20+-'; Color = '00EE82EE' },
+    @{ Pattern = '\bB\x20+-'; Color = '00FF0000' },
+    @{ Pattern = '\bD\x20+-'; Color = '00B469FF' },
+    @{ Pattern = '\bEX\x20+-'; Color = '000000FF' },
+    @{ Pattern = '\bO\x20+-'; Color = '00FACE87' },
+    @{ Pattern = '\bIA\x20+-'; Color = '00C0C0C0' },
+    @{ Pattern = '\b(?:N1|E1)\x20+-'; Color = '0000FFFF' },
+    @{ Pattern = '\b(?:N2|E2)\x20+-'; Color = '00FFBF00' },
+    @{ Pattern = '\b(?:i|su|L1|L2|ia)\x20+-'; Color = '00C1B6FF' },
+    @{ Pattern = '(?:\*|U|o|P|H|a|\+|%|p|l)\x20+-'; Color = '00E22B8A' }
 )
+$routeEntryRuleSpecs = @(
+    @{ Pattern = '^\x20*D\x20+EX(?=\x20+(?:[0-9]{1,3}\.){3}[0-9]{1,3}(?:/[0-9]{1,2})?\b)'; Color = '000000FF' },
+    @{ Pattern = '^\x20*O\x20+IA(?=\x20+(?:[0-9]{1,3}\.){3}[0-9]{1,3}(?:/[0-9]{1,2})?\b)'; Color = '00C0C0C0' },
+    @{ Pattern = '^\x20*O\x20+(?:E1|N1)(?=\x20+(?:[0-9]{1,3}\.){3}[0-9]{1,3}(?:/[0-9]{1,2})?\b)'; Color = '0000FFFF' },
+    @{ Pattern = '^\x20*O\x20+(?:E2|N2)(?=\x20+(?:[0-9]{1,3}\.){3}[0-9]{1,3}(?:/[0-9]{1,2})?\b)'; Color = '00FFBF00' },
+    @{ Pattern = '^\x20*i\x20+(?:su|L1|L2|ia)(?=\x20+(?:[0-9]{1,3}\.){3}[0-9]{1,3}(?:/[0-9]{1,2})?\b)'; Color = '00C1B6FF' },
+    @{ Pattern = '^\x20*(?:i|su|L1|L2|ia)(?=\x20+(?:[0-9]{1,3}\.){3}[0-9]{1,3}(?:/[0-9]{1,2})?\b)'; Color = '00C1B6FF' },
+    @{ Pattern = '^\x20*L(?=\x20+(?:[0-9]{1,3}\.){3}[0-9]{1,3}(?:/[0-9]{1,2})?\b)'; Color = '0032CD32' },
+    @{ Pattern = '^\x20*C(?=\x20+(?:[0-9]{1,3}\.){3}[0-9]{1,3}(?:/[0-9]{1,2})?\b)'; Color = '00FFFF00' },
+    @{ Pattern = '^\x20*(?:S\*|S)(?=\x20+(?:[0-9]{1,3}\.){3}[0-9]{1,3}(?:/[0-9]{1,2})?\b)'; Color = '0000D7FF' },
+    @{ Pattern = '^\x20*R(?=\x20+(?:[0-9]{1,3}\.){3}[0-9]{1,3}(?:/[0-9]{1,2})?\b)'; Color = '00FF00FF' },
+    @{ Pattern = '^\x20*I(?=\x20+(?:[0-9]{1,3}\.){3}[0-9]{1,3}(?:/[0-9]{1,2})?\b)'; Color = '0000A5FF' },
+    @{ Pattern = '^\x20*M(?=\x20+(?:[0-9]{1,3}\.){3}[0-9]{1,3}(?:/[0-9]{1,2})?\b)'; Color = '00EE82EE' },
+    @{ Pattern = '^\x20*B(?=\x20+(?:[0-9]{1,3}\.){3}[0-9]{1,3}(?:/[0-9]{1,2})?\b)'; Color = '00FF0000' },
+    @{ Pattern = '^\x20*D(?=\x20+(?:[0-9]{1,3}\.){3}[0-9]{1,3}(?:/[0-9]{1,2})?\b)'; Color = '00B469FF' },
+    @{ Pattern = '^\x20*O(?=\x20+(?:[0-9]{1,3}\.){3}[0-9]{1,3}(?:/[0-9]{1,2})?\b)'; Color = '00FACE87' },
+    @{ Pattern = '^\x20*(?:\*|U|o|P|H|a|\+|%|p|l)(?=\x20+(?:[0-9]{1,3}\.){3}[0-9]{1,3}(?:/[0-9]{1,2})?\b)'; Color = '00E22B8A' }
+)
+$routeRuleSpecs = @($routeMetricRule) + $routeLegendRuleSpecs + $routeEntryRuleSpecs
 
 Assert-True -Condition (-not $routeSectionText.Contains('\s')) -Message 'Routing table rules must use SecureCRT literal-space syntax instead of \s'
 foreach ($routeRule in $routeRuleSpecs) {
@@ -402,13 +421,36 @@ foreach ($routeRule in $routeRuleSpecs) {
     Assert-Equal -Actual $ruleMatches.Count -Expected 1 -Message "Routing table rule has exact pattern and color: $($routeRule.Pattern)"
 }
 
+$routeCodeColorPairs = @(
+    @{ Name = 'L'; Legend = 0; Entries = @(6) },
+    @{ Name = 'C'; Legend = 1; Entries = @(7) },
+    @{ Name = 'S/S*'; Legend = 2; Entries = @(8) },
+    @{ Name = 'R'; Legend = 3; Entries = @(9) },
+    @{ Name = 'I'; Legend = 4; Entries = @(10) },
+    @{ Name = 'M'; Legend = 5; Entries = @(11) },
+    @{ Name = 'B'; Legend = 6; Entries = @(12) },
+    @{ Name = 'D'; Legend = 7; Entries = @(13) },
+    @{ Name = 'EX'; Legend = 8; Entries = @(0) },
+    @{ Name = 'O'; Legend = 9; Entries = @(14) },
+    @{ Name = 'IA'; Legend = 10; Entries = @(1) },
+    @{ Name = 'N1/E1'; Legend = 11; Entries = @(2) },
+    @{ Name = 'N2/E2'; Legend = 12; Entries = @(3) },
+    @{ Name = 'IS-IS'; Legend = 13; Entries = @(4, 5) },
+    @{ Name = 'Modifiers'; Legend = 14; Entries = @(15) }
+)
+foreach ($codeColorPair in $routeCodeColorPairs) {
+    foreach ($entryIndex in $codeColorPair.Entries) {
+        Assert-Equal -Actual $routeLegendRuleSpecs[$codeColorPair.Legend].Color -Expected $routeEntryRuleSpecs[$entryIndex].Color -Message "Legend and route entry colors must agree for $($codeColorPair.Name)"
+    }
+}
+
 $routeTranscript = @(
-    'Codes: L - local, C - connected, S - static, R - RIP, M - mobile, B - BGP',
+    'Codes: L - local, C - connected, S - static, R - RIP, M - mobile, B - BGP, I - IGRP',
     '       D - EIGRP, EX - EIGRP external, O - OSPF, IA - OSPF inter area',
     '       N1 - OSPF NSSA external type 1, N2 - OSPF NSSA external type 2',
     '       E1 - OSPF external type 1, E2 - OSPF external type 2',
     '       i - IS-IS, su - IS-IS summary, L1 - IS-IS level-1, L2 - IS-IS level-2',
-    '       * - candidate default, U - per-user static route, o - ODR',
+    '       * - candidate default, U - per-user static route, o - ODR, + - replicated route, l - LISP',
     'D EX 192.168.12.0/24 [170/2560051456] via 192.168.34.4, 01:15:14, Ethernet0/0',
     'C    192.168.23.0/24 is directly connected, Ethernet0/1',
     'L    192.168.23.3/32 is directly connected, Ethernet0/1',
@@ -419,7 +461,7 @@ $routeTranscriptOptions = [System.Text.RegularExpressions.RegexOptions]::Multili
     [System.Text.RegularExpressions.RegexOptions]::CultureInvariant
 $metricMatches = [System.Text.RegularExpressions.Regex]::Matches(
     $routeTranscript,
-    $routeRuleSpecs[0].Pattern,
+    $routeMetricRule.Pattern,
     $routeTranscriptOptions
 )
 Assert-Equal -Actual $metricMatches.Count -Expected 3 -Message 'AD/Metric rule must match every screenshot-style route metric'
@@ -428,37 +470,53 @@ Assert-True -Condition (($metricMatches | ForEach-Object { $_.Value }) -contains
 Assert-True -Condition (($metricMatches | ForEach-Object { $_.Value }) -contains '[1/0]') -Message 'AD/Metric rule must match the static default metric'
 
 $legendRuleSamples = @{
-    1 = 'Codes: L - local, C - connected'
-    2 = 'Codes: S - static, R - RIP, M - mobile, B - BGP, D - EIGRP, EX - EIGRP external'
-    3 = 'Codes: IA - OSPF inter area'
-    4 = 'Codes: N1 - OSPF NSSA external type 1, E1 - OSPF external type 1'
-    5 = 'Codes: N2 - OSPF NSSA external type 2, E2 - OSPF external type 2'
-    6 = 'Codes: i - IS-IS, su - IS-IS summary, L1 - IS-IS level-1, L2 - IS-IS level-2, ia - IS-IS inter area'
-    7 = 'Codes: * - candidate default, U - per-user static route, o - ODR, + - replicated route, l - LISP'
+    0 = 'Codes: L - local'
+    1 = 'Codes: C - connected'
+    2 = 'Codes: S - static, S* - candidate static'
+    3 = 'Codes: R - RIP'
+    4 = 'Codes: I - IGRP'
+    5 = 'Codes: M - mobile'
+    6 = 'Codes: B - BGP'
+    7 = 'Codes: D - EIGRP'
+    8 = 'Codes: EX - EIGRP external'
+    9 = 'Codes: O - OSPF'
+    10 = 'Codes: IA - OSPF inter area'
+    11 = 'Codes: N1 - OSPF NSSA external type 1, E1 - OSPF external type 1'
+    12 = 'Codes: N2 - OSPF NSSA external type 2, E2 - OSPF external type 2'
+    13 = 'Codes: i - IS-IS, su - IS-IS summary, L1 - IS-IS level-1, L2 - IS-IS level-2, ia - IS-IS inter area'
+    14 = 'Codes: * - candidate default, U - per-user static route, o - ODR, + - replicated route, l - LISP'
 }
 foreach ($sampleIndex in $legendRuleSamples.Keys) {
     $legendMatches = [System.Text.RegularExpressions.Regex]::Matches(
         $legendRuleSamples[$sampleIndex],
-        $routeRuleSpecs[$sampleIndex].Pattern,
+        $routeLegendRuleSpecs[$sampleIndex].Pattern,
         $routeTranscriptOptions
     )
     Assert-True -Condition ($legendMatches.Count -ge 1) -Message "Protocol legend rule must match its Cisco route-code legend: $($legendRuleSamples[$sampleIndex])"
 }
 
 $routeEntrySamples = @{
-    8 = 'D EX 192.168.12.0/24'
-    9 = 'O IA 10.0.0.0/8'
-    10 = 'O E1 10.0.0.0/8'
-    11 = 'O E2 10.0.0.0/8'
-    12 = 'i su 10.0.0.0/8'
-    13 = 'C 192.168.23.0/24'
-    14 = 'S* 0.0.0.0/0'
+    0 = 'D EX 192.168.12.0/24'
+    1 = 'O IA 10.0.0.0/8'
+    2 = 'O E1 10.0.0.0/8'
+    3 = 'O E2 10.0.0.0/8'
+    4 = 'i su 10.0.0.0/8'
+    5 = 'su 10.0.0.0/8'
+    6 = 'L 192.168.23.3/32'
+    7 = 'C 192.168.23.0/24'
+    8 = 'S* 0.0.0.0/0'
+    9 = 'R 10.0.0.0/8'
+    10 = 'I 10.0.0.0/8'
+    11 = 'M 10.0.0.0/8'
+    12 = 'B 10.0.0.0/8'
+    13 = 'D 10.0.0.0/8'
+    14 = 'O 10.0.0.0/8'
     15 = 'l 10.0.0.0/8'
 }
 foreach ($sampleIndex in $routeEntrySamples.Keys) {
     $entryMatches = [System.Text.RegularExpressions.Regex]::Matches(
         $routeEntrySamples[$sampleIndex],
-        $routeRuleSpecs[$sampleIndex].Pattern,
+        $routeEntryRuleSpecs[$sampleIndex].Pattern,
         $routeTranscriptOptions
     )
     Assert-Equal -Actual $entryMatches.Count -Expected 1 -Message "Route code rule must match a route line: $($routeEntrySamples[$sampleIndex])"
@@ -471,7 +529,7 @@ foreach ($falseRouteLine in @(
         '* - candidate default',
         'prefix [170/2560051456]'
     )) {
-    foreach ($routeRule in $routeRuleSpecs[8..15]) {
+    foreach ($routeRule in $routeEntryRuleSpecs) {
         Assert-True -Condition (-not [System.Text.RegularExpressions.Regex]::IsMatch(
                 $falseRouteLine,
                 $routeRule.Pattern,
@@ -483,7 +541,7 @@ foreach ($falseRouteLine in @(
 foreach ($invalidMetric in @('[170]', '[170/]', '[foo/bar]', '[1/2/3]')) {
     Assert-True -Condition (-not [System.Text.RegularExpressions.Regex]::IsMatch(
             $invalidMetric,
-            $routeRuleSpecs[0].Pattern,
+            $routeMetricRule.Pattern,
             [System.Text.RegularExpressions.RegexOptions]::CultureInvariant
         )) -Message "AD/Metric rule must reject malformed metric: $invalidMetric"
 }

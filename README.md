@@ -170,6 +170,10 @@ INI의 색상값은 일반적인 SecureCRT/Windows `COLORREF` 저장 방식인 `
 | `00B469FF` | `#FF69B4` | 핫 핑크 | 프로토콜·기능 이름, LSDB/OSPF 식별자 |
 | `00EE82EE` | `#EE82EE` | 바이올렛 | 인스턴스·그룹·LSA 유형 등 분류 정보 |
 | `0000D7FF` | `#FFD700` | 골드 | OSPF cost/metric/reference bandwidth |
+| `00FF0000` | `#0000FF` | 파랑 | BGP 경로 코드 |
+| `00FFBF00` | `#00BFFF` | 딥 스카이 블루 | OSPF N2/E2 경로 코드 |
+| `00C1B6FF` | `#FFB6C1` | 라이트 핑크 | IS-IS 계층·요약 경로 코드 |
+| `00E22B8A` | `#8A2BE2` | 블루 바이올렛 | 후보 기본 경로·정적/특수 경로 modifier |
 
 색상은 위험도를 엄밀하게 표현하는 표준이 아니라 출력 탐색을 위한 시각적 분류입니다. 예를 들어 같은 색상이 여러 그룹에서 서로 다른 종류의 정보에 사용될 수 있으므로, 색상만으로 장비 상태를 판정하지 말고 원문 출력과 장비의 실제 상태를 함께 확인해야 합니다.
 
@@ -194,6 +198,7 @@ INI의 색상값은 일반적인 SecureCRT/Windows `COLORREF` 저장 방식인 `
 | `OSPF_SPF_AND_CONFIG` | SPF 실행·타이머, `ip ospf ... area`, network area, passive-interface, default-information, area 설정 |
 | `VLAN_TRUNK_AND_LAYER2` | trunk/access, VLAN/Vl 번호, native VLAN, dot1q/802.1Q |
 | `INTERFACES_ADDRESSES_AND_IDENTIFIERS` | 장문·축약 인터페이스 이름, IPv4 주소/프리픽스, Cisco dotted MAC 및 콜론 형식 MAC |
+| `ROUTING_TABLE_CODES_AND_METRICS` | `show ip route` 범례와 경로 행의 L/C/S·S*/R/I/M/B/D/EX/O, OSPF 세부 코드, IS-IS 계층 코드 및 `[AD/Metric]` 값 |
 | `ROUTING_REDISTRIBUTION` | `show ip protocols`의 `Redistributing:` 필드, OSPF `External Routes from`, EIGRP/RIP 및 BGP·IS-IS·IGRP·connected·static 재분배 소스 |
 | `ROUTING_PROTOCOL_DISTANCE` | `show ip protocols`의 EIGRP `Distance: internal ... external ...` 및 RIP·OSPF·ODR `Distance: (default is ...)` 값 |
 | `ROUTING_PROTOCOLS_AND_MISC` | EIGRP/BGP/RIP/HSRP/OSPF/MST/PVST/STP, route-map/prefix-list/ACL, SSH/Telnet/TFTP/NTP/SNMP, 표 헤더 |
