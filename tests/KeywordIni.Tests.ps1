@@ -28,6 +28,43 @@ function Assert-Equal {
     Assert-True -Condition ([bool]$equal) -Message "$Message (actual: $Actual; expected: $Expected)"
 }
 
+function Get-IniSectionText {
+    param(
+        [Parameter(Mandatory = $true)][string[]]$Lines,
+        [Parameter(Mandatory = $true)][string]$SectionName
+    )
+
+    $sectionStart = -1
+    $sectionEnd = $Lines.Count
+
+    for ($index = 0; $index -lt $Lines.Count; $index++) {
+        if ([System.Text.RegularExpressions.Regex]::IsMatch(
+                $Lines[$index],
+                ('^\s*"\[\*\]{0}",' -f [System.Text.RegularExpressions.Regex]::Escape($SectionName)),
+                [System.Text.RegularExpressions.RegexOptions]::CultureInvariant
+            )) {
+            $sectionStart = $index
+            break
+        }
+    }
+
+    Assert-True -Condition ($sectionStart -ge 0) -Message "$SectionName section must exist"
+
+    for ($index = $sectionStart + 1; $index -lt $Lines.Count; $index++) {
+        if ([System.Text.RegularExpressions.Regex]::IsMatch(
+                $Lines[$index],
+                '^\s*"\[\*\]',
+                [System.Text.RegularExpressions.RegexOptions]::CultureInvariant
+            )) {
+            $sectionEnd = $index
+            break
+        }
+    }
+
+    $sectionLines = $Lines[$sectionStart..($sectionEnd - 1)]
+    return [string]::Join([System.Environment]::NewLine, $sectionLines)
+}
+
 $iniPath = [System.IO.Path]::GetFullPath((Join-Path (Join-Path $PSScriptRoot '..') 'PNET-Cisco-Dark.ini'))
 $iniText = [System.IO.File]::ReadAllText($iniPath)
 $lines = $iniText -split '\r?\n'
@@ -58,35 +95,7 @@ $regexLineModeMatches = [System.Text.RegularExpressions.Regex]::Matches(
 Assert-Equal -Actual $regexLineModeMatches.Count -Expected 1 -Message 'keyword list must explicitly configure Regex Line Mode once'
 Assert-Equal -Actual $regexLineModeMatches[0].Groups[1].Value -Expected '00000001' -Message 'Regex Line Mode must be enabled for line-anchored prompt rules'
 Write-Host '[PASS] SecureCRT regex line mode is enabled for line-anchored prompt rules'
-$sectionStart = -1
-$sectionEnd = $lines.Count
-
-for ($index = 0; $index -lt $lines.Count; $index++) {
-    if ([System.Text.RegularExpressions.Regex]::IsMatch(
-            $lines[$index],
-            '^\s*"\[\*\]OSPF_PROCESS_AREA_AND_IDS",',
-            [System.Text.RegularExpressions.RegexOptions]::CultureInvariant
-        )) {
-        $sectionStart = $index
-        break
-    }
-}
-
-Assert-True -Condition ($sectionStart -ge 0) -Message 'OSPF_PROCESS_AREA_AND_IDS section must exist'
-
-for ($index = $sectionStart + 1; $index -lt $lines.Count; $index++) {
-    if ([System.Text.RegularExpressions.Regex]::IsMatch(
-            $lines[$index],
-            '^\s*"\[\*\]',
-            [System.Text.RegularExpressions.RegexOptions]::CultureInvariant
-        )) {
-        $sectionEnd = $index
-        break
-    }
-}
-
-$sectionLines = $lines[$sectionStart..($sectionEnd - 1)]
-$sectionText = [string]::Join([System.Environment]::NewLine, $sectionLines)
+$sectionText = Get-IniSectionText -Lines $lines -SectionName 'OSPF_PROCESS_AREA_AND_IDS'
 $expectedPatterns = @(
     '\bIt is an autonomous system boundary router\b',
     '\bIt is an area border and autonomous system boundary router\b'
@@ -194,35 +203,7 @@ Assert-Equal -Actual $numericTranscriptMatches.Count -Expected 1 -Message 'inden
 
 Write-Host '[PASS] Cisco Area rules match indented BACKBONE(0), numeric, and IP output'
 
-$neighborSectionStart = -1
-$neighborSectionEnd = $lines.Count
-
-for ($index = 0; $index -lt $lines.Count; $index++) {
-    if ([System.Text.RegularExpressions.Regex]::IsMatch(
-            $lines[$index],
-            '^\s*"\[\*\]OSPF_NEIGHBOR_STATES",',
-            [System.Text.RegularExpressions.RegexOptions]::CultureInvariant
-        )) {
-        $neighborSectionStart = $index
-        break
-    }
-}
-
-Assert-True -Condition ($neighborSectionStart -ge 0) -Message 'OSPF_NEIGHBOR_STATES section must exist'
-
-for ($index = $neighborSectionStart + 1; $index -lt $lines.Count; $index++) {
-    if ([System.Text.RegularExpressions.Regex]::IsMatch(
-            $lines[$index],
-            '^\s*"\[\*\]',
-            [System.Text.RegularExpressions.RegexOptions]::CultureInvariant
-        )) {
-        $neighborSectionEnd = $index
-        break
-    }
-}
-
-$neighborSectionLines = $lines[$neighborSectionStart..($neighborSectionEnd - 1)]
-$neighborSectionText = [string]::Join([System.Environment]::NewLine, $neighborSectionLines)
+$neighborSectionText = Get-IniSectionText -Lines $lines -SectionName 'OSPF_NEIGHBOR_STATES'
 $fullPattern = '\bFULL\b'
 $fullRulePattern = '^\s*"' + [System.Text.RegularExpressions.Regex]::Escape($fullPattern) + '",0032CD32,00000001\s*$'
 $fullRuleMatches = [System.Text.RegularExpressions.Regex]::Matches(
@@ -258,35 +239,7 @@ foreach ($falseFullSample in @('FULLY', 'FULLNESS', 'preFULL', 'FULL_suffix')) {
 
 Write-Host '[PASS] OSPF neighbor FULL state logs receive standalone green highlighting without false positives'
 
-$costSectionStart = -1
-$costSectionEnd = $lines.Count
-
-for ($index = 0; $index -lt $lines.Count; $index++) {
-    if ([System.Text.RegularExpressions.Regex]::IsMatch(
-            $lines[$index],
-            '^\s*"\[\*\]OSPF_COST_METRIC_REFERENCE_BW",',
-            [System.Text.RegularExpressions.RegexOptions]::CultureInvariant
-        )) {
-        $costSectionStart = $index
-        break
-    }
-}
-
-Assert-True -Condition ($costSectionStart -ge 0) -Message 'OSPF_COST_METRIC_REFERENCE_BW section must exist'
-
-for ($index = $costSectionStart + 1; $index -lt $lines.Count; $index++) {
-    if ([System.Text.RegularExpressions.Regex]::IsMatch(
-            $lines[$index],
-            '^\s*"\[\*\]',
-            [System.Text.RegularExpressions.RegexOptions]::CultureInvariant
-        )) {
-        $costSectionEnd = $index
-        break
-    }
-}
-
-$costSectionLines = $lines[$costSectionStart..($costSectionEnd - 1)]
-$costSectionText = [string]::Join([System.Environment]::NewLine, $costSectionLines)
+$costSectionText = Get-IniSectionText -Lines $lines -SectionName 'OSPF_COST_METRIC_REFERENCE_BW'
 $costFullPattern = '\b[Cc]ost\x20*:\x20*[0-9]+\b'
 $costPattern = '\b[Cc]ost\b'
 $costFullRulePattern = '^\s*"' + [System.Text.RegularExpressions.Regex]::Escape($costFullPattern) + '",0000D7FF,00000001\s*$'
@@ -549,35 +502,7 @@ foreach ($invalidMetric in @('[170]', '[170/]', '[foo/bar]', '[1/2/3]')) {
 
 Write-Host '[PASS] Routing table protocol codes and AD/Metric values match screenshot-style output without one-letter false positives'
 
-$routeSummarySectionStart = -1
-$routeSummarySectionEnd = $lines.Count
-
-for ($index = 0; $index -lt $lines.Count; $index++) {
-    if ([System.Text.RegularExpressions.Regex]::IsMatch(
-            $lines[$index],
-            '^\s*"\[\*\]ROUTING_TABLE_SUMMARY_DISCARD",',
-            [System.Text.RegularExpressions.RegexOptions]::CultureInvariant
-        )) {
-        $routeSummarySectionStart = $index
-        break
-    }
-}
-
-Assert-True -Condition ($routeSummarySectionStart -ge 0) -Message 'ROUTING_TABLE_SUMMARY_DISCARD section must exist'
-
-for ($index = $routeSummarySectionStart + 1; $index -lt $lines.Count; $index++) {
-    if ([System.Text.RegularExpressions.Regex]::IsMatch(
-            $lines[$index],
-            '^\s*"\[\*\]',
-            [System.Text.RegularExpressions.RegexOptions]::CultureInvariant
-        )) {
-        $routeSummarySectionEnd = $index
-        break
-    }
-}
-
-$routeSummarySectionLines = $lines[$routeSummarySectionStart..($routeSummarySectionEnd - 1)]
-$routeSummarySectionText = [string]::Join([System.Environment]::NewLine, $routeSummarySectionLines)
+$routeSummarySectionText = Get-IniSectionText -Lines $lines -SectionName 'ROUTING_TABLE_SUMMARY_DISCARD'
 $routeSummaryRuleSpecs = @(
     @{ Pattern = 'is\x20+a\x20+summary(?=,\x20+[0-9]{2}:[0-9]{2}:[0-9]{2},\x20+Null[0-9]+\b)'; Color = '00FACE87' },
     @{ Pattern = '\bNull[0-9]+\b'; Color = '0000FFFF' }
@@ -648,35 +573,7 @@ foreach ($nonRouteNullLine in @('This is a summary', 'show ip route', 'Null')) {
 
 Write-Host '[PASS] OSPF and EIGRP summary routes highlight summary and Null numeric discard next hops'
 
-$networkSectionStart = -1
-$networkSectionEnd = $lines.Count
-
-for ($index = 0; $index -lt $lines.Count; $index++) {
-    if ([System.Text.RegularExpressions.Regex]::IsMatch(
-            $lines[$index],
-            '^\s*"\[\*\]OSPF_NETWORK_TYPE_AND_DR_BDR",',
-            [System.Text.RegularExpressions.RegexOptions]::CultureInvariant
-        )) {
-        $networkSectionStart = $index
-        break
-    }
-}
-
-Assert-True -Condition ($networkSectionStart -ge 0) -Message 'OSPF_NETWORK_TYPE_AND_DR_BDR section must exist'
-
-for ($index = $networkSectionStart + 1; $index -lt $lines.Count; $index++) {
-    if ([System.Text.RegularExpressions.Regex]::IsMatch(
-            $lines[$index],
-            '^\s*"\[\*\]',
-            [System.Text.RegularExpressions.RegexOptions]::CultureInvariant
-        )) {
-        $networkSectionEnd = $index
-        break
-    }
-}
-
-$networkSectionLines = $lines[$networkSectionStart..($networkSectionEnd - 1)]
-$networkSectionText = [string]::Join([System.Environment]::NewLine, $networkSectionLines)
+$networkSectionText = Get-IniSectionText -Lines $lines -SectionName 'OSPF_NETWORK_TYPE_AND_DR_BDR'
 $networkTranscript = @(
     '  Network Type BROADCAST',
     '  Network Type POINT_TO_POINT',
@@ -781,35 +678,7 @@ foreach ($networkRule in $networkRules) {
 
 Write-Host '[PASS] OSPF network type tokens match screenshot transcript without multi-word whitespace rules'
 
-$virtualLinkSectionStart = -1
-$virtualLinkSectionEnd = $lines.Count
-
-for ($index = 0; $index -lt $lines.Count; $index++) {
-    if ([System.Text.RegularExpressions.Regex]::IsMatch(
-            $lines[$index],
-            '^\s*"\[\*\]OSPF_VIRTUAL_LINKS",',
-            [System.Text.RegularExpressions.RegexOptions]::CultureInvariant
-        )) {
-        $virtualLinkSectionStart = $index
-        break
-    }
-}
-
-Assert-True -Condition ($virtualLinkSectionStart -ge 0) -Message 'OSPF_VIRTUAL_LINKS section must exist'
-
-for ($index = $virtualLinkSectionStart + 1; $index -lt $lines.Count; $index++) {
-    if ([System.Text.RegularExpressions.Regex]::IsMatch(
-            $lines[$index],
-            '^\s*"\[\*\]',
-            [System.Text.RegularExpressions.RegexOptions]::CultureInvariant
-        )) {
-        $virtualLinkSectionEnd = $index
-        break
-    }
-}
-
-$virtualLinkSectionLines = $lines[$virtualLinkSectionStart..($virtualLinkSectionEnd - 1)]
-$virtualLinkSectionText = [string]::Join([System.Environment]::NewLine, $virtualLinkSectionLines)
+$virtualLinkSectionText = Get-IniSectionText -Lines $lines -SectionName 'OSPF_VIRTUAL_LINKS'
 $virtualLinkRuleSpecs = @(
     @{ Pattern = '\bTransit\x20+area\b'; Color = '00FACE87' },
     @{ Pattern = '\bTransit\x20+area\x20+(?:[0-9]+|(?:[0-9]{1,3}\.){3}[0-9]{1,3})\b,\x20+via\x20+interface\b'; Color = '0000FFFF' },
@@ -910,35 +779,7 @@ foreach ($invalidVirtualLinkIdentifier in @('OSPF_VL', 'OSPF_VLX', 'XOSPF_VL1', 
 
 Write-Host '[PASS] OSPF virtual-link identifiers, Transit area phrases, and integer/dotted area IDs match Cisco output'
 
-$promptSectionStart = -1
-$promptSectionEnd = $lines.Count
-
-for ($index = 0; $index -lt $lines.Count; $index++) {
-    if ([System.Text.RegularExpressions.Regex]::IsMatch(
-            $lines[$index],
-            '^\s*"\[\*\]PROMPTS",',
-            [System.Text.RegularExpressions.RegexOptions]::CultureInvariant
-        )) {
-        $promptSectionStart = $index
-        break
-    }
-}
-
-Assert-True -Condition ($promptSectionStart -ge 0) -Message 'PROMPTS section must exist'
-
-for ($index = $promptSectionStart + 1; $index -lt $lines.Count; $index++) {
-    if ([System.Text.RegularExpressions.Regex]::IsMatch(
-            $lines[$index],
-            '^\s*"\[\*\]',
-            [System.Text.RegularExpressions.RegexOptions]::CultureInvariant
-        )) {
-        $promptSectionEnd = $index
-        break
-    }
-}
-
-$promptSectionLines = $lines[$promptSectionStart..($promptSectionEnd - 1)]
-$promptSectionText = [string]::Join([System.Environment]::NewLine, $promptSectionLines)
+$promptSectionText = Get-IniSectionText -Lines $lines -SectionName 'PROMPTS'
 $promptRules = @(
     @{
         Pattern = '^[A-Za-z0-9_.:/-]+\(config(?:-[^)]+)?\)#'
@@ -1029,35 +870,7 @@ Write-Host '[PASS] Cisco prompt rules match prompt prefixes across a multi-line 
 
 Write-Host '[PASS] Cisco prompt rules match IOS/XR prompts and reject ordinary output'
 
-$redistributionSectionStart = -1
-$redistributionSectionEnd = $lines.Count
-
-for ($index = 0; $index -lt $lines.Count; $index++) {
-    if ([System.Text.RegularExpressions.Regex]::IsMatch(
-            $lines[$index],
-            '^\s*"\[\*\]ROUTING_REDISTRIBUTION",',
-            [System.Text.RegularExpressions.RegexOptions]::CultureInvariant
-        )) {
-        $redistributionSectionStart = $index
-        break
-    }
-}
-
-Assert-True -Condition ($redistributionSectionStart -ge 0) -Message 'ROUTING_REDISTRIBUTION section must exist'
-
-for ($index = $redistributionSectionStart + 1; $index -lt $lines.Count; $index++) {
-    if ([System.Text.RegularExpressions.Regex]::IsMatch(
-            $lines[$index],
-            '^\s*"\[\*\]',
-            [System.Text.RegularExpressions.RegexOptions]::CultureInvariant
-        )) {
-        $redistributionSectionEnd = $index
-        break
-    }
-}
-
-$redistributionSectionLines = $lines[$redistributionSectionStart..($redistributionSectionEnd - 1)]
-$redistributionSectionText = [string]::Join([System.Environment]::NewLine, $redistributionSectionLines)
+$redistributionSectionText = Get-IniSectionText -Lines $lines -SectionName 'ROUTING_REDISTRIBUTION'
 $redistributionRules = @(
     @{
         Pattern = '^\x20*Redistributing:\x20+(?:(?:External|external)\x20+(?:Routes|routes)\x20+(?:from|From)\x20+)?(?:BGP|bgp|EIGRP|eigrp|EGP|egp|OSPF|ospf|RIP|rip|IS-IS|is-is|ISIS|isis|IGRP|igrp|hello|Hello|connected|Connected|static|Static)(?:\x20+[0-9]+)?(?:\x20*,\x20*(?:BGP|bgp|EIGRP|eigrp|EGP|egp|OSPF|ospf|RIP|rip|IS-IS|is-is|ISIS|isis|IGRP|igrp|hello|Hello|connected|Connected|static|Static)(?:\x20+[0-9]+)?)*\x20*$'
@@ -1169,35 +982,7 @@ Assert-Equal -Actual $externalRoutesMatches.Count -Expected 1 -Message 'OSPF Ext
 
 Write-Host '[PASS] show ip protocols redistribution rules match OSPF, EIGRP, RIP, and other source protocols'
 
-$distanceSectionStart = -1
-$distanceSectionEnd = $lines.Count
-
-for ($index = 0; $index -lt $lines.Count; $index++) {
-    if ([System.Text.RegularExpressions.Regex]::IsMatch(
-            $lines[$index],
-            '^\s*"\[\*\]ROUTING_PROTOCOL_DISTANCE",',
-            [System.Text.RegularExpressions.RegexOptions]::CultureInvariant
-        )) {
-        $distanceSectionStart = $index
-        break
-    }
-}
-
-Assert-True -Condition ($distanceSectionStart -ge 0) -Message 'ROUTING_PROTOCOL_DISTANCE section must exist'
-
-for ($index = $distanceSectionStart + 1; $index -lt $lines.Count; $index++) {
-    if ([System.Text.RegularExpressions.Regex]::IsMatch(
-            $lines[$index],
-            '^\s*"\[\*\]',
-            [System.Text.RegularExpressions.RegexOptions]::CultureInvariant
-        )) {
-        $distanceSectionEnd = $index
-        break
-    }
-}
-
-$distanceSectionLines = $lines[$distanceSectionStart..($distanceSectionEnd - 1)]
-$distanceSectionText = [string]::Join([System.Environment]::NewLine, $distanceSectionLines)
+$distanceSectionText = Get-IniSectionText -Lines $lines -SectionName 'ROUTING_PROTOCOL_DISTANCE'
 $distanceRules = @(
     @{
         Pattern = '^\x20*Distance:\x20+internal\x20+[0-9]+\x20+external\x20+[0-9]+\x20*$'

@@ -3,12 +3,12 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Reflection;
-using System.Text;
 
 namespace InstallKeywordHighlightSetup;
 
 internal static class Program
 {
+    // Keep in sync with Install-KeywordHighlight.ps1's $script:UpdateFileNames and launcher/Launcher.csproj (EmbeddedResource).
     private const string ScriptLogicalName = "Install-KeywordHighlight.ps1";
     private const string IniLogicalName = "PNET-Cisco-Dark.ini";
     private const string ChangelogLogicalName = "CHANGELOG.md";
@@ -29,22 +29,48 @@ internal static class Program
             return 1;
         }
 
-        var passthroughArgs = BuildArgumentString(args);
-
         var psi = new ProcessStartInfo
         {
             FileName = "powershell.exe",
-            Arguments = $"-NoProfile -ExecutionPolicy Bypass -File \"{tempScriptPath}\"{passthroughArgs}",
             UseShellExecute = false,
             RedirectStandardOutput = false,
             RedirectStandardError = false,
             RedirectStandardInput = false,
         };
+        psi.ArgumentList.Add("-NoProfile");
+        psi.ArgumentList.Add("-ExecutionPolicy");
+        psi.ArgumentList.Add("Bypass");
+        psi.ArgumentList.Add("-File");
+        psi.ArgumentList.Add(tempScriptPath);
+        foreach (var arg in args)
+        {
+            psi.ArgumentList.Add(arg);
+        }
 
         int exitCode;
+        Process? process = null;
         try
         {
-            using var process = Process.Start(psi);
+            try
+            {
+                process = Process.Start(psi);
+            }
+            catch (Win32Exception)
+            {
+                psi.FileName = "pwsh.exe";
+                try
+                {
+                    process = Process.Start(psi);
+                }
+                catch (Win32Exception ex)
+                {
+                    Console.Error.WriteLine("Failed to launch powershell.exe or pwsh.exe.");
+                    Console.Error.WriteLine("Make sure Windows PowerShell or PowerShell 7+ is installed and available on PATH.");
+                    Console.Error.WriteLine($"Details: {ex.Message}");
+                    return 1;
+                }
+            }
+
             if (process is null)
             {
                 Console.Error.WriteLine("Failed to start powershell.exe: no process was created.");
@@ -54,18 +80,15 @@ internal static class Program
             process.WaitForExit();
             exitCode = process.ExitCode;
         }
-        catch (Win32Exception ex)
-        {
-            Console.Error.WriteLine("Failed to launch powershell.exe.");
-            Console.Error.WriteLine("Make sure Windows PowerShell is installed and available on PATH.");
-            Console.Error.WriteLine($"Details: {ex.Message}");
-            return 1;
-        }
         catch (Exception ex)
         {
             Console.Error.WriteLine("An unexpected error occurred while running the installer script.");
             Console.Error.WriteLine(ex.Message);
             return 1;
+        }
+        finally
+        {
+            process?.Dispose();
         }
 
         if (args.Length == 0)
@@ -92,6 +115,13 @@ internal static class Program
 
     private static string ExtractEmbeddedResource(Assembly assembly, string logicalName, string destinationDirPath)
     {
+        var destinationPath = Path.Combine(destinationDirPath, logicalName);
+
+        if (File.Exists(destinationPath))
+        {
+            return destinationPath;
+        }
+
         using var resourceStream = assembly.GetManifestResourceStream(logicalName);
         if (resourceStream is null)
         {
@@ -102,55 +132,11 @@ internal static class Program
                 $"Available resources: {availableList}");
         }
 
-        var destinationPath = Path.Combine(destinationDirPath, logicalName);
-
         using (var fileStream = new FileStream(destinationPath, FileMode.Create, FileAccess.Write, FileShare.None))
         {
             resourceStream.CopyTo(fileStream);
         }
 
         return destinationPath;
-    }
-
-    private static string BuildArgumentString(string[] args)
-    {
-        if (args.Length == 0)
-        {
-            return string.Empty;
-        }
-
-        var sb = new StringBuilder();
-        foreach (var arg in args)
-        {
-            sb.Append(' ');
-            sb.Append(QuoteArgument(arg));
-        }
-
-        return sb.ToString();
-    }
-
-    // Quotes a single argument for the Windows command line in a way that
-    // survives both the C# ProcessStartInfo.Arguments parser and
-    // PowerShell's own argument parsing.
-    private static string QuoteArgument(string arg)
-    {
-        if (arg.Length > 0 && arg.IndexOfAny(new[] { ' ', '\t', '"' }) < 0)
-        {
-            return arg;
-        }
-
-        var sb = new StringBuilder();
-        sb.Append('"');
-        for (var i = 0; i < arg.Length; i++)
-        {
-            var c = arg[i];
-            if (c == '"')
-            {
-                sb.Append('\\');
-            }
-            sb.Append(c);
-        }
-        sb.Append('"');
-        return sb.ToString();
     }
 }

@@ -94,6 +94,7 @@ $ErrorActionPreference = 'Stop'
 $script:UpdateRepository = 'MinePacu/securecrt-cisco-iol-keyword-highlighting'
 $script:UpdateBranch = 'main'
 $script:UpdateInProgressVariable = 'CRT_CISCO_IOL_KEYWORD_HIGHLIGHT_UPDATE_IN_PROGRESS'
+# Keep in sync with launcher/Launcher.csproj (EmbeddedResource) and launcher/Program.cs (Script/Ini/ChangelogLogicalName).
 $script:UpdateFileNames = @(
     'Install-KeywordHighlight.ps1',
     'PNET-Cisco-Dark.ini',

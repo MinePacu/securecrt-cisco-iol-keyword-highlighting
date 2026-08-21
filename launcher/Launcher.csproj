@@ -10,6 +10,7 @@
     <InvariantGlobalization>true</InvariantGlobalization>
   </PropertyGroup>
 
+  <!-- Keep in sync with Install-KeywordHighlight.ps1's $script:UpdateFileNames and launcher/Program.cs (ScriptLogicalName/IniLogicalName/ChangelogLogicalName). -->
   <ItemGroup>
     <EmbeddedResource Include="../Install-KeywordHighlight.ps1">
       <LogicalName>Install-KeywordHighlight.ps1</LogicalName>
