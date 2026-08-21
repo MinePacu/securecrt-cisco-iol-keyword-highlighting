@@ -195,7 +195,7 @@ INI의 색상값은 일반적인 SecureCRT/Windows `COLORREF` 저장 방식인 `
 | `OSPF_TIMERS` | Hello, Dead, Wait, Retransmit, Dead Time, Transmit Delay |
 | `OSPF_LSDB_AND_LSA` | LSDB/LSA, Router·Network·Summary·External/NSSA LSA, Link State ID, sequence/checksum |
 | `OSPF_SPF_AND_CONFIG` | SPF 실행·타이머, `ip ospf ... area`, network area, passive-interface, default-information, area 설정 |
-| `OSPF_VIRTUAL_LINKS` | `show ip ospf virtual-links`의 `Transit area` 문구와 정수·IPv4 형식 transit area ID |
+| `OSPF_VIRTUAL_LINKS` | `show ip ospf virtual-links`의 `OSPF_VL<n>` 식별자, `Transit area` 문구와 정수·IPv4 형식 transit area ID |
 | `VLAN_TRUNK_AND_LAYER2` | trunk/access, VLAN/Vl 번호, native VLAN, dot1q/802.1Q |
 | `INTERFACES_ADDRESSES_AND_IDENTIFIERS` | 장문·축약 인터페이스 이름, IPv4 주소/프리픽스, Cisco dotted MAC 및 콜론 형식 MAC |
 | `ROUTING_TABLE_CODES_AND_METRICS` | `show ip route` 범례와 경로 행의 L/C/S·S*/R/I/M/B/D/EX/O, OSPF 세부 코드, IS-IS 계층 코드 및 `[AD/Metric]` 값 |

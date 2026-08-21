@@ -4,6 +4,17 @@
 
 ## [Unreleased]
 
+## [0.1.4-alpha.4] - 2026-08-21
+
+### Added
+
+- `Install-KeywordHighlight.ps1`을 감싸는 원클릭 Windows 실행 파일(`launcher/`, `dist/Install-KeywordHighlight-Setup.exe`)을 추가해, PowerShell 실행 정책을 수동으로 우회하지 않고도 설치 스크립트를 바로 실행할 수 있도록 했습니다.
+
+### Fixed
+
+- SecureCRT에서 OSPF virtual-link의 정수·IPv4 `Transit area ... via interface` 값이 안정적으로 색상 강조되도록 lookaround 없는 직접 매칭 규칙으로 보강했습니다.
+- Cisco OSPF virtual-link 출력 및 디버그 로그의 `OSPF_VL0`, `OSPF_VL1` 형식 식별자를 경계 기반으로 색상 강조하도록 보강했습니다.
+
 ## [0.1.4-alpha.3] - 2026-08-20
 
 ### Fixed

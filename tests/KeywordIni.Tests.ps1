@@ -812,11 +812,13 @@ $virtualLinkSectionLines = $lines[$virtualLinkSectionStart..($virtualLinkSection
 $virtualLinkSectionText = [string]::Join([System.Environment]::NewLine, $virtualLinkSectionLines)
 $virtualLinkRuleSpecs = @(
     @{ Pattern = '\bTransit\x20+area\b'; Color = '00FACE87' },
-    @{ Pattern = '\barea\x20+(?:[0-9]+|(?:[0-9]{1,3}\.){3}[0-9]{1,3})\b(?=,\x20+via\x20+interface\b)'; Color = '0000FFFF' }
+    @{ Pattern = '\bTransit\x20+area\x20+(?:[0-9]+|(?:[0-9]{1,3}\.){3}[0-9]{1,3})\b,\x20+via\x20+interface\b'; Color = '0000FFFF' },
+    @{ Pattern = '\bOSPF_VL[0-9]+\b'; Color = '00B469FF' }
 )
 
 Assert-True -Condition (-not $virtualLinkSectionText.Contains('\s')) -Message 'OSPF virtual-link rules must use SecureCRT literal-space syntax instead of \s'
 Assert-True -Condition (-not $virtualLinkSectionText.Contains('(?<=')) -Message 'OSPF virtual-link rules must not depend on undocumented lookbehind'
+Assert-True -Condition (-not $virtualLinkSectionText.Contains('(?=')) -Message 'OSPF virtual-link rules must not depend on lookahead for numeric highlighting'
 foreach ($virtualLinkRule in $virtualLinkRuleSpecs) {
     $escapedPattern = [System.Text.RegularExpressions.Regex]::Escape($virtualLinkRule.Pattern)
     $rulePattern = '^\s*"' + $escapedPattern + '",' + $virtualLinkRule.Color + ',00000001\s*$'
@@ -848,15 +850,37 @@ $transitAreaValueMatches = [System.Text.RegularExpressions.Regex]::Matches(
 Assert-Equal -Actual $transitAreaMatches.Count -Expected 2 -Message 'Transit area phrase must match integer and dotted-area virtual-link output'
 Assert-True -Condition (($transitAreaMatches | ForEach-Object { $_.Value }) -contains 'Transit area') -Message 'Transit area rule must highlight the full phrase'
 Assert-Equal -Actual $transitAreaValueMatches.Count -Expected 2 -Message 'Transit area value rule must match integer and dotted area IDs'
-Assert-True -Condition (($transitAreaValueMatches | ForEach-Object { $_.Value }) -contains 'area 1') -Message 'Transit area value rule must match integer area 1'
-Assert-True -Condition (($transitAreaValueMatches | ForEach-Object { $_.Value }) -contains 'area 0.0.0.1') -Message 'Transit area value rule must match dotted area 0.0.0.1'
+Assert-True -Condition (($transitAreaValueMatches | ForEach-Object { $_.Value }) -contains 'Transit area 1, via interface') -Message 'Transit area value rule must match integer area 1'
+Assert-True -Condition (($transitAreaValueMatches | ForEach-Object { $_.Value }) -contains 'Transit area 0.0.0.1, via interface') -Message 'Transit area value rule must match dotted area 0.0.0.1'
+
+$virtualLinkIdentifierTranscript = @(
+    'Virtual Link OSPF_VL1 to router 192.168.101.2 is up',
+    '%OSPF-5-ADJCHG: Process 1, Nbr 192.168.101.2 on OSPF_VL1 from LOADING to FULL, Loading Done'
+) -join [Environment]::NewLine
+$virtualLinkIdentifierMatches = [System.Text.RegularExpressions.Regex]::Matches(
+    $virtualLinkIdentifierTranscript,
+    $virtualLinkRuleSpecs[2].Pattern,
+    $transcriptOptions
+)
+Assert-Equal -Actual $virtualLinkIdentifierMatches.Count -Expected 2 -Message 'OSPF virtual-link identifier rule must match show and debug output'
+Assert-True -Condition (($virtualLinkIdentifierMatches | ForEach-Object { $_.Value }) -contains 'OSPF_VL1') -Message 'OSPF virtual-link identifier rule must match OSPF_VL1'
+
+$virtualLinkWhitespaceTranscript = "Transit   area   1,   via   interface Ethernet0/1`r`nTransit area 0.0.0.1, via  interface Ethernet0"
+$whitespaceAreaValueMatches = [System.Text.RegularExpressions.Regex]::Matches(
+    $virtualLinkWhitespaceTranscript,
+    $virtualLinkRuleSpecs[1].Pattern,
+    $transcriptOptions
+)
+Assert-Equal -Actual $whitespaceAreaValueMatches.Count -Expected 2 -Message 'Transit area value rule must match SecureCRT output with variable spaces and CRLF'
 
 foreach ($invalidVirtualLinkLine in @(
         'Transit areas 1, via interface Ethernet0/1',
         'Transit area X, via interface Ethernet0/1',
         'Transit area one, via interface Ethernet0/1',
         'Transit area 0.0.0, via interface Ethernet0',
-        'Transit area 1 without an interface'
+        'Transit area 1 without an interface',
+        'area 1, via interface Ethernet0/1',
+        'OSPF area 0.0.0.1, via interface Ethernet0'
     )) {
     Assert-True -Condition (-not [System.Text.RegularExpressions.Regex]::IsMatch(
             $invalidVirtualLinkLine,
@@ -876,7 +900,15 @@ foreach ($nonTransitLine in @(
         )) -Message "Transit area phrase rule must reject non-Transit output: $nonTransitLine"
 }
 
-Write-Host '[PASS] OSPF virtual-link Transit area phrases and integer/dotted area IDs match Cisco output'
+foreach ($invalidVirtualLinkIdentifier in @('OSPF_VL', 'OSPF_VLX', 'XOSPF_VL1', 'OSPF_VL1X')) {
+    Assert-True -Condition (-not [System.Text.RegularExpressions.Regex]::IsMatch(
+            $invalidVirtualLinkIdentifier,
+            $virtualLinkRuleSpecs[2].Pattern,
+            [System.Text.RegularExpressions.RegexOptions]::CultureInvariant
+        )) -Message "OSPF virtual-link identifier rule must reject malformed or embedded identifiers: $invalidVirtualLinkIdentifier"
+}
+
+Write-Host '[PASS] OSPF virtual-link identifiers, Transit area phrases, and integer/dotted area IDs match Cisco output'
 
 $promptSectionStart = -1
 $promptSectionEnd = $lines.Count
