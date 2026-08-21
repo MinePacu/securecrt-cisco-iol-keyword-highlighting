@@ -10,6 +10,8 @@ namespace InstallKeywordHighlightSetup;
 internal static class Program
 {
     private const string ScriptLogicalName = "Install-KeywordHighlight.ps1";
+    private const string IniLogicalName = "PNET-Cisco-Dark.ini";
+    private const string ChangelogLogicalName = "CHANGELOG.md";
 
     private static int Main(string[] args)
     {
@@ -78,24 +80,36 @@ internal static class Program
 
     private static string ExtractEmbeddedScript(Assembly assembly)
     {
-        using var resourceStream = assembly.GetManifestResourceStream(ScriptLogicalName);
+        var tempDirPath = Path.Combine(Path.GetTempPath(), "Install-KeywordHighlight-Setup");
+        Directory.CreateDirectory(tempDirPath);
+
+        var scriptPath = ExtractEmbeddedResource(assembly, ScriptLogicalName, tempDirPath);
+        ExtractEmbeddedResource(assembly, IniLogicalName, tempDirPath);
+        ExtractEmbeddedResource(assembly, ChangelogLogicalName, tempDirPath);
+
+        return scriptPath;
+    }
+
+    private static string ExtractEmbeddedResource(Assembly assembly, string logicalName, string destinationDirPath)
+    {
+        using var resourceStream = assembly.GetManifestResourceStream(logicalName);
         if (resourceStream is null)
         {
             var available = assembly.GetManifestResourceNames();
             var availableList = available.Length > 0 ? string.Join(", ", available) : "(none)";
             throw new InvalidOperationException(
-                $"Embedded resource '{ScriptLogicalName}' was not found in the assembly. " +
+                $"Embedded resource '{logicalName}' was not found in the assembly. " +
                 $"Available resources: {availableList}");
         }
 
-        var tempScriptPath = Path.Combine(Path.GetTempPath(), "Install-KeywordHighlight-Setup.ps1");
+        var destinationPath = Path.Combine(destinationDirPath, logicalName);
 
-        using (var fileStream = new FileStream(tempScriptPath, FileMode.Create, FileAccess.Write, FileShare.None))
+        using (var fileStream = new FileStream(destinationPath, FileMode.Create, FileAccess.Write, FileShare.None))
         {
             resourceStream.CopyTo(fileStream);
         }
 
-        return tempScriptPath;
+        return destinationPath;
     }
 
     private static string BuildArgumentString(string[] args)

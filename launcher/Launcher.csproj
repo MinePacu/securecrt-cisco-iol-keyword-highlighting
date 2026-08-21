@@ -14,6 +14,12 @@
     <EmbeddedResource Include="../Install-KeywordHighlight.ps1">
       <LogicalName>Install-KeywordHighlight.ps1</LogicalName>
     </EmbeddedResource>
+    <EmbeddedResource Include="../PNET-Cisco-Dark.ini">
+      <LogicalName>PNET-Cisco-Dark.ini</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="../CHANGELOG.md">
+      <LogicalName>CHANGELOG.md</LogicalName>
+    </EmbeddedResource>
   </ItemGroup>
 
 </Project>
