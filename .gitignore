@@ -1,0 +1,4 @@
+dist/
+launcher/bin/
+launcher/obj/
+.DS_Store
