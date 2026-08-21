@@ -4,32 +4,11 @@
 
 ## [Unreleased]
 
-## [0.1.4-alpha.4] - 2026-08-21
+## [0.1.4] - 2026-08-22
 
 ### Added
 
-- `Install-KeywordHighlight.ps1`을 감싸는 원클릭 Windows 실행 파일(`launcher/`, `dist/Install-KeywordHighlight-Setup.exe`)을 추가해, PowerShell 실행 정책을 수동으로 우회하지 않고도 설치 스크립트를 바로 실행할 수 있도록 했습니다.
-
-### Fixed
-
-- SecureCRT에서 OSPF virtual-link의 정수·IPv4 `Transit area ... via interface` 값이 안정적으로 색상 강조되도록 lookaround 없는 직접 매칭 규칙으로 보강했습니다.
-- Cisco OSPF virtual-link 출력 및 디버그 로그의 `OSPF_VL0`, `OSPF_VL1` 형식 식별자를 경계 기반으로 색상 강조하도록 보강했습니다.
-
-## [0.1.4-alpha.3] - 2026-08-20
-
-### Fixed
-
-- 어두운 터미널 배경에서 가독성이 낮았던 `show ip route` 후보 기본 경로 및 정적·특수 경로 modifier의 색상을 고대비 흰색으로 조정했습니다.
-- Cisco `show ip route`의 OSPF·EIGRP 요약 경로에서 `is a summary` 문구와 `Null0` 등 숫자형 Null discard next-hop을 별도 색상으로 강조하도록 보강했습니다.
-- Cisco `show ip ospf virtual-links` 출력의 `Transit area 1` 및 `Transit area 0.0.0.1` 형식 문구와 transit area ID를 별도 색상으로 강조하도록 보강했습니다.
-
-## [0.1.4-alpha.2] - 2026-08-20
-
-### Fixed
-
-- Cisco `show ip route`의 범례와 실제 경로 행을 L/C/S·S*/R/I/M/B/D/EX/O 및 OSPF·IS-IS 세부 코드별로 서로 다른 색상으로 구분하도록 보강했습니다.
-
-## [0.1.4-alpha.1] - 2026-08-20
+- `Install-KeywordHighlight.ps1`을 감싸는 원클릭 Windows 실행 파일(`launcher/`, `Install-KeywordHighlight-Setup.exe` 폴더 배포)을 추가해, PowerShell 실행 정책을 수동으로 우회하지 않고도 설치 스크립트를 바로 실행할 수 있도록 했습니다.
 
 ### Fixed
 
@@ -37,6 +16,10 @@
 - OSPF Neighbor가 `LOADING`에서 `FULL`로 전환되거나 `state FULL`로 동기화되는 로그의 `FULL` 상태를 색상 강조하도록 보강했습니다.
 - Cisco `show ip protocols` 출력의 `Redistributing:` 항목과 OSPF의 `External Routes from`, EIGRP/RIP 및 주요 재분배 소스·연속 행을 색상 강조하도록 보강했습니다.
 - Cisco `show ip protocols` 출력의 EIGRP `Distance: internal ... external ...` 및 RIP·OSPF·ODR의 `Distance: (default is ...)` 값을 색상 강조하도록 보강했습니다.
+- Cisco `show ip route`의 범례와 실제 경로 행을 L/C/S·S*/R/I/M/B/D/EX/O 및 OSPF·IS-IS 세부 코드별로 서로 다른 색상으로 구분하도록 보강했습니다.
+- 어두운 터미널 배경에서 가독성이 낮았던 `show ip route` 후보 기본 경로 및 정적·특수 경로 modifier의 색상을 고대비 흰색으로 조정했습니다.
+- Cisco `show ip route`의 OSPF·EIGRP 요약 경로에서 `is a summary` 문구와 `Null0` 등 숫자형 Null discard next-hop을 별도 색상으로 강조하도록 보강했습니다.
+- Cisco `show ip ospf virtual-links` 출력의 `Transit area 1`/`Transit area 0.0.0.1` 형식 문구, transit area ID, `OSPF_VL0`/`OSPF_VL1` 형식 식별자를 안정적으로 색상 강조하도록 보강했습니다(lookaround 없는 직접 매칭 규칙 적용).
 
 ## [0.1.3] - 2026-08-19
 
