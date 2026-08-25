@@ -4,6 +4,12 @@
 
 ## [Unreleased]
 
+## [0.1.5-alpha.3] - 2026-08-25
+
+### Fixed
+
+- 런처가 `%TEMP%\Install-KeywordHighlight-Setup`에 기존 파일이 있어도 최신 임베디드 설치 파일로 덮어쓰도록 수정했습니다.
+
 ## [0.1.5-alpha.2] - 2026-08-25
 
 ### Added

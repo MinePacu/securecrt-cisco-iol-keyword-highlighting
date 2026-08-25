@@ -117,11 +117,6 @@ internal static class Program
     {
         var destinationPath = Path.Combine(destinationDirPath, logicalName);
 
-        if (File.Exists(destinationPath))
-        {
-            return destinationPath;
-        }
-
         using var resourceStream = assembly.GetManifestResourceStream(logicalName);
         if (resourceStream is null)
         {
