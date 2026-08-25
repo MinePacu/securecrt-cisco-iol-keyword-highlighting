@@ -4,6 +4,20 @@
 
 ## [Unreleased]
 
+## [0.1.5-alpha.1] - 2026-08-25
+
+### Added
+
+- Cisco BGP 출력과 키워드 목록 메타데이터를 검증하는 관련 회귀 테스트를 추가하고, `Keyword List` 메타데이터를 갱신했습니다.
+
+### Fixed
+
+- Cisco `show ip bgp`의 `>`, `r`, `*` 상태 코드를 서로 다른 색상으로 구분하고, Origin codes의 `i`와 경로 행의 iBGP `i`를 구분하도록 보강했습니다.
+- Cisco `show ip bgp`의 `Metric`, `LocPrf`, `Weight`, `Path` 제목과 값을 색상 강조하도록 보강했습니다.
+- Cisco `show ip bgp summary`의 local AS 및 `V`/`AS`/`State` 항목을 색상 강조하도록 보강했습니다.
+- Cisco `show ip bgp neighbor(s)`의 remote AS와 `Last read`/`last write`, hold time, keepalive, seconds 항목을 색상 강조하도록 보강했습니다.
+- Cisco `show ip route`의 BGP `B` 코드를 파란색에서 고대비 주황색으로 변경했습니다.
+
 ## [0.1.4] - 2026-08-22
 
 ### Added
