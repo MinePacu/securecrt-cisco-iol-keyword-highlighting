@@ -4,6 +4,13 @@
 
 ## [Unreleased]
 
+## [0.1.5-alpha.5] - 2026-08-25
+
+### Fixed
+
+- BGP 전용 규칙의 우선순서를 generic 상태 규칙보다 앞으로 복구하고, `show ip bgp summary`의 neighbor `V` 값과 `show ip bgp neighbors`의 `state = ...` 출력을 다시 강조하도록 정리했습니다.
+- `show ip bgp`의 iBGP `i` 규칙이 `*>`/`r>` 상태 접두사를 함께 먹지 않고, 경로 줄의 단일 `i` 마커만 따로 강조하도록 조정했습니다.
+
 ## [0.1.5-alpha.4] - 2026-08-25
 
 ### Added

@@ -1079,13 +1079,13 @@ Write-Host '[PASS] show ip protocols distance values match EIGRP internal/extern
 
 $bgpRouteSectionText = Get-IniSectionText -Lines $lines -SectionName 'BGP_SHOW_IP'
 $bgpRouteRuleSpecs = @(
-    @{ Pattern = '^\x20*[*sdhri>Smbxfa]+\x20*(?:[0-9]{1,3}\.){3}[0-9]{1,3}(?:/[0-9]{1,2})?\x20+(?:[0-9]{1,3}\.){3}[0-9]{1,3}\x20+.*$'; Color = '0000D7FF' },
-    @{ Pattern = '^\x20*[*sdhrSmbxfa]?>(?:\x20*)?i(?=\x20*(?:[0-9]{1,3}\.){3}[0-9]{1,3}(?:/[0-9]{1,2})?\b)'; Color = '00EE82EE' },
+    @{ Pattern = '^\x20*[*sdhri>Smbxfa]+\x20*(?:[0-9]{1,3}\.){3}[0-9]{1,3}(?:/[0-9]{1,2})?\x20+(?:[0-9]{1,3}\.){3}[0-9]{1,3}(?:\x20+(?:[0-9]+)?){3}\x20+(?:[0-9]+\x20+)*(?:i|e|\?)(?:\x20|$)'; Color = '0000D7FF' },
+    @{ Pattern = 'i(?=\x20*(?:[0-9]{1,3}\.){3}[0-9]{1,3}(?:/[0-9]{1,2})?\b)'; Color = '00EE82EE' },
     @{ Pattern = '^\x20*Origin\x20+codes:\x20+i\x20+-'; Color = '00FACE87' },
-    @{ Pattern = '^\x20*Network\x20+Next\x20+Hop\x20+Metric(?=\x20+LocPrf\b)'; Color = '00FACE87' },
-    @{ Pattern = '^\x20*Network\x20+Next\x20+Hop\x20+Metric\x20+LocPrf(?=\x20+Weight\b)'; Color = '00FACE87' },
-    @{ Pattern = '^\x20*Network\x20+Next\x20+Hop\x20+Metric\x20+LocPrf\x20+Weight(?=\x20+Path\b)'; Color = '00FACE87' },
     @{ Pattern = '^\x20*Network\x20+Next\x20+Hop\x20+Metric\x20+LocPrf\x20+Weight\x20+Path(?=\x20*$)'; Color = '00FACE87' },
+    @{ Pattern = '^\x20*Network\x20+Next\x20+Hop\x20+Metric\x20+LocPrf\x20+Weight(?=\x20+Path\b)'; Color = '00FACE87' },
+    @{ Pattern = '^\x20*Network\x20+Next\x20+Hop\x20+Metric\x20+LocPrf(?=\x20+Weight\b)'; Color = '00FACE87' },
+    @{ Pattern = '^\x20*Network\x20+Next\x20+Hop\x20+Metric(?=\x20+LocPrf\b)'; Color = '00FACE87' },
     @{ Pattern = '^\x20*[*sdhrSmbxfa]?>(?=(?:\x20*i)?\x20*(?:[0-9]{1,3}\.){3}[0-9]{1,3}(?:/[0-9]{1,2})?\b)'; Color = '0032CD32' },
     @{ Pattern = '^\x20*[*]?r(?=>(?:\x20*i)?\x20*(?:[0-9]{1,3}\.){3}[0-9]{1,3}(?:/[0-9]{1,2})?\b|\x20+(?:[0-9]{1,3}\.){3}[0-9]{1,3}(?:/[0-9]{1,2})?\b)'; Color = '000000FF' },
     @{ Pattern = '^\x20*\*(?=(?:[>rSdhmbxfa]\x20*)?(?:i\x20*)?\x20*(?:[0-9]{1,3}\.){3}[0-9]{1,3}(?:/[0-9]{1,2})?\b)'; Color = '00FFFF00' }
@@ -1128,8 +1128,9 @@ $ibgpMatches = [System.Text.RegularExpressions.Regex]::Matches(
     $bgpTranscriptOptions
 )
 Assert-Equal -Actual $ibgpMatches.Count -Expected 2 -Message 'iBGP status i rule matches *>i and r>i route status forms'
-Assert-True -Condition (($ibgpMatches | ForEach-Object { $_.Value }) -contains '*>i') -Message 'iBGP status i rule matches the compact *>i route prefix'
-Assert-True -Condition (($ibgpMatches | ForEach-Object { $_.Value }) -contains 'r>i') -Message 'iBGP status i rule matches the spaced r>i route prefix'
+Assert-True -Condition (($ibgpMatches | ForEach-Object { $_.Value }) -notcontains '*>i') -Message 'iBGP status i rule must not consume the compact *> status prefix'
+Assert-True -Condition (($ibgpMatches | ForEach-Object { $_.Value }) -notcontains 'r>i') -Message 'iBGP status i rule must not consume the spaced r> status prefix'
+Assert-Equal -Actual ((($ibgpMatches | ForEach-Object { $_.Value }) | Where-Object { $_ -eq 'i' }).Count) -Expected 2 -Message 'iBGP status i rule matches two single-character i markers'
 $originLegendMatches = [System.Text.RegularExpressions.Regex]::Matches(
     $bgpRouteTranscript,
     $bgpRouteRuleSpecs[2].Pattern,
@@ -1175,15 +1176,28 @@ foreach ($statusRule in $statusRuleSpecs) {
             )) -Message "$($statusRule.Name) rule rejects non-route false positive: $falseStatusSample"
     }
 }
+$bestStatusValues = [System.Text.RegularExpressions.Regex]::Matches(
+    $bgpRouteTranscript,
+    $bgpRouteRuleSpecs[7].Pattern,
+    $bgpTranscriptOptions
+) | ForEach-Object { $_.Value }
+Assert-True -Condition ($bestStatusValues -contains '>') -Message 'best > rule still matches the standalone > status marker'
+$validStatusValues = [System.Text.RegularExpressions.Regex]::Matches(
+    $bgpRouteTranscript,
+    $bgpRouteRuleSpecs[9].Pattern,
+    $bgpTranscriptOptions
+) | ForEach-Object { $_.Value }
+Assert-True -Condition ($validStatusValues -contains '*') -Message 'valid * rule still matches the standalone * status marker'
 $routeRuleOrderText = $bgpRouteSectionText
 Assert-True -Condition ($routeRuleOrderText.IndexOf($bgpRouteRuleSpecs[1].Pattern) -lt $routeRuleOrderText.IndexOf($bgpRouteRuleSpecs[2].Pattern)) -Message 'iBGP route rule must precede the origin legend rule'
+Assert-True -Condition ($iniText.IndexOf('"[*]BGP_SHOW_IP",00FFFFFF,00000001') -lt $iniText.IndexOf('"[*]CRITICAL_ERRORS_AND_DOWN_STATES",00FFFFFF,00000001')) -Message 'BGP-specific sections must appear before generic state rules'
 Write-Host '[PASS] BGP show-ip status, origin, and metric fields match Cisco route output without one-character false positives'
 
 $bgpSummarySectionText = Get-IniSectionText -Lines $lines -SectionName 'BGP_SHOW_IP_SUMMARY'
 $bgpSummaryRuleSpecs = @(
     @{ Pattern = '^\x20*BGP\x20+router\x20+identifier\x20+(?:[0-9]{1,3}\.){3}[0-9]{1,3},\x20+local\x20+AS\x20+number\x20+(?:[0-9]{1,5}\.[0-9]{1,5}|[0-9]{1,10})\b'; Color = '0000D7FF' },
     @{ Pattern = '^\x20*BGP\x20+router\x20+identifier\x20+(?:[0-9]{1,3}\.){3}[0-9]{1,3},\x20+local\x20+AS\x20+number\b'; Color = '00FACE87' },
-    @{ Pattern = '^\x20*Neighbor\x20+V\x20+AS\x20+MsgRcvd\x20+MsgSent\x20+TblVer\x20+InQ\x20+OutQ\x20+Up/Down\x20+State(?:/PfxRcd)?\x20*$'; Color = '00FACE87' },
+    @{ Pattern = '^\x20*\*?(?:[0-9]{1,3}\.){3}[0-9]{1,3}\x20+[0-9]+\b'; Color = '0000D7FF' },
     @{ Pattern = '^\x20*Neighbor\x20+V(?=\x20+AS\x20+MsgRcvd\b)'; Color = '00FACE87' },
     @{ Pattern = '^\x20*Neighbor\x20+V\x20+AS(?=\x20+MsgRcvd\b)'; Color = '00FACE87' },
     @{ Pattern = '^\x20*Neighbor\x20+V\x20+AS\x20+MsgRcvd\x20+MsgSent\x20+TblVer\x20+InQ\x20+OutQ\x20+Up/Down\x20+State(?=\x2fPfxRcd\b|\x20*$)'; Color = '00FACE87' },
@@ -1228,12 +1242,14 @@ $summaryLocalTitleMatches = [System.Text.RegularExpressions.Regex]::Matches(
 )
 Assert-Equal -Actual $summaryLocalTitleMatches.Count -Expected 2 -Message 'Summary local AS title rule matches both Cisco local-AS sentence forms'
 Assert-True -Condition (($summaryLocalTitleMatches | ForEach-Object { $_.Value }) -notcontains 'BGP router identifier 192.168.3.1, local AS number 45000') -Message 'Summary local AS title rule stops before the ASN value'
-$summaryHeaderMatches = [System.Text.RegularExpressions.Regex]::Matches(
+$summaryVValueMatches = [System.Text.RegularExpressions.Regex]::Matches(
     $bgpSummaryTranscript,
     $bgpSummaryRuleSpecs[2].Pattern,
     $bgpTranscriptOptions
 )
-Assert-Equal -Actual $summaryHeaderMatches.Count -Expected 2 -Message 'Summary header rule matches State/PfxRcd and State variants'
+Assert-Equal -Actual $summaryVValueMatches.Count -Expected 3 -Message 'Summary V value rule matches standard, asdot, and compact neighbor rows'
+Assert-True -Condition (($summaryVValueMatches | ForEach-Object { $_.Value }) -contains '*192.168.3.2    4') -Message 'Summary V value rule includes dynamic-neighbor rows'
+Assert-True -Condition (($summaryVValueMatches | ForEach-Object { $_.Value }) -contains '10.1.1.1 4') -Message 'Summary V value rule includes the compact screenshot-style row prefix'
 foreach ($headerRule in $bgpSummaryRuleSpecs[3..5]) {
     $headerMatches = [System.Text.RegularExpressions.Regex]::Matches(
         $bgpSummaryTranscript,
@@ -1258,6 +1274,7 @@ Assert-True -Condition (($summaryValueMatches | ForEach-Object { $_.Value }) -co
 Assert-True -Condition (($summaryValueMatches | ForEach-Object { $_.Value }) -contains '10.1.1.1 4 2 5 6 0 0 00:52:39 2') -Message 'Summary value rule includes the screenshot-style compact row'
 foreach ($falseSummarySample in @(
         'V AS MsgRcvd MsgSent',
+        'not-a-neighbor V 50000 2 2 0 0 0 00:00:37 0',
         'BGP router identifier 192.168.3.1, local AS number not-an-asn',
         'not-a-neighbor 4 50000 2 2 0 0 0 00:00:37 0',
         '192.168.3.2 4 50000 2 2 0 0 0 00:00:37 Unknown'
@@ -1278,15 +1295,15 @@ $bgpNeighborRuleSpecs = @(
     @{ Pattern = '^\x20*BGP\x20+neighbor\x20+is\x20+\*?(?:[0-9]{1,3}\.){3}[0-9]{1,3},\x20+remote\x20+AS\b'; Color = '00FACE87' },
     @{ Pattern = '^\x20*Last\x20+read\x20+[0-9]{2}:[0-9]{2}:[0-9]{2}\b'; Color = '0000D7FF' },
     @{ Pattern = '^\x20*Last\x20+read\b'; Color = '00FACE87' },
-    @{ Pattern = '(?:^\x20*|\x20+)last\x20+write\x20+[0-9]{2}:[0-9]{2}:[0-9]{2}\b'; Color = '0000D7FF' },
+    @{ Pattern = '(?:^\x20*|\x20+)(?:last\x20+write|Last\x20+written)\x20+[0-9]{2}:[0-9]{2}:[0-9]{2}\b'; Color = '0000D7FF' },
     @{ Pattern = '(?:^\x20*|\x20+)last\x20+write\b'; Color = '00FACE87' },
-    @{ Pattern = '^\x20*Last\x20+written\x20+[0-9]{2}:[0-9]{2}:[0-9]{2}\b'; Color = '0000D7FF' },
-    @{ Pattern = '^\x20*Last\x20+written\b'; Color = '00FACE87' },
+    @{ Pattern = '(?:^\x20*|\x20+)Last\x20+written\b'; Color = '00FACE87' },
     @{ Pattern = '(?:^\x20*|\x20+)hold\x20+time\x20+(?:is|=)\x20+[0-9]+\b'; Color = '0000D7FF' },
     @{ Pattern = '(?:^\x20*|\x20+)hold\x20+time\x20+(?:is\b|=)'; Color = '00FACE87' },
     @{ Pattern = '(?:^\x20*|\x20+)keepalive\x20+interval\x20+(?:is|=)\x20+[0-9]+\x20+seconds\b'; Color = '0000D7FF' },
     @{ Pattern = '(?:^\x20*|\x20+)keepalive\x20+interval\x20+(?:is\b|=)'; Color = '00FACE87' },
-    @{ Pattern = '^\x20*NEXT_HOP\x20+is\x20+always\x20+this\x20+router\x20+for\x20+eBGP\x20+paths\x20*$'; Color = '00FFFF00' }
+    @{ Pattern = '^\x20*NEXT_HOP\x20+is\x20+always\x20+this\x20+router\x20+for\x20+eBGP\x20+paths\x20*$'; Color = '00FFFF00' },
+    @{ Pattern = '(?:^\x20*|\x20+)(?:state|State|STATE)\x20*=\x20*(?:REACHABLE|Reachable|reachable|STALE|Stale|stale|DELAY|Delay|delay|PROBE|Probe|probe|INCOMPLETE|Incomplete|incomplete|FAILED|Failed|failed|NOARP|Noarp|noarp|PERMANENT|Permanent|permanent|REACH|Reach|reach|VALID|Valid|valid|INVALID|Invalid|invalid|DUPLICATE|Duplicate|duplicate|TENTATIVE|Tentative|tentative|UP|Up|up|DOWN|Down|down|FULL|Full|full|INIT|Init|init|ACTIVE|Active|active|IDLE|Idle|idle|CONNECT|Connect|connect|OPENSENT|OpenSent|opensent|OPENCONFIRM|OpenConfirm|openconfirm|ESTABLISHED|Established|established)\b'; Color = '0000D7FF' }
 )
 Assert-True -Condition (-not $bgpNeighborSectionText.Contains('\s')) -Message 'BGP neighbor rules must use SecureCRT literal-space syntax instead of \s'
 Assert-True -Condition (-not $bgpNeighborSectionText.Contains('(?<=')) -Message 'BGP neighbor rules must not depend on lookbehind'
@@ -1309,7 +1326,9 @@ $bgpNeighborTranscript = @(
     '  Last read 00:00:28, hold time = 90, keepalive interval = 30 seconds',
     '  Last written 00:00:28, keepalive timer expiry due 00:00:31',
     ' NEXT_HOP is always this router for eBGP paths',
-    '    NEXT_HOP   is  always   this router  for   eBGP   paths   '
+    '    NEXT_HOP   is  always   this router  for   eBGP   paths   ',
+    '  state = Established',
+    '  STATE = DOWN'
 ) -join [Environment]::NewLine
 $neighborRemoteValueMatches = [System.Text.RegularExpressions.Regex]::Matches(
     $bgpNeighborTranscript,
@@ -1326,15 +1345,18 @@ Assert-Equal -Actual $neighborRemoteTitleMatches.Count -Expected 2 -Message 'Nei
 Assert-True -Condition (($neighborRemoteTitleMatches | ForEach-Object { $_.Value }) -notcontains 'BGP neighbor is 1.1.1.1,  remote AS 2') -Message 'Neighbor remote-AS title rule stops before the ASN value'
 $lastReadMatches = [System.Text.RegularExpressions.Regex]::Matches($bgpNeighborTranscript, $bgpNeighborRuleSpecs[2].Pattern, $bgpTranscriptOptions)
 $lastWriteMatches = [System.Text.RegularExpressions.Regex]::Matches($bgpNeighborTranscript, $bgpNeighborRuleSpecs[4].Pattern, $bgpTranscriptOptions)
-$lastWrittenMatches = [System.Text.RegularExpressions.Regex]::Matches($bgpNeighborTranscript, $bgpNeighborRuleSpecs[6].Pattern, $bgpTranscriptOptions)
+$lastWriteTitleMatches = [System.Text.RegularExpressions.Regex]::Matches($bgpNeighborTranscript, $bgpNeighborRuleSpecs[5].Pattern, $bgpTranscriptOptions)
+$lastWrittenTitleMatches = [System.Text.RegularExpressions.Regex]::Matches($bgpNeighborTranscript, $bgpNeighborRuleSpecs[6].Pattern, $bgpTranscriptOptions)
 Assert-Equal -Actual $lastReadMatches.Count -Expected 2 -Message 'Last read value rule matches IOS timer lines'
-Assert-Equal -Actual $lastWriteMatches.Count -Expected 1 -Message 'last write value rule matches the IOS lowercase variant'
-Assert-Equal -Actual $lastWrittenMatches.Count -Expected 1 -Message 'Last written value rule matches the alternate Cisco wording'
-$holdValueMatches = [System.Text.RegularExpressions.Regex]::Matches($bgpNeighborTranscript, $bgpNeighborRuleSpecs[8].Pattern, $bgpTranscriptOptions)
-$holdTitleMatches = [System.Text.RegularExpressions.Regex]::Matches($bgpNeighborTranscript, $bgpNeighborRuleSpecs[9].Pattern, $bgpTranscriptOptions)
-$keepaliveValueMatches = [System.Text.RegularExpressions.Regex]::Matches($bgpNeighborTranscript, $bgpNeighborRuleSpecs[10].Pattern, $bgpTranscriptOptions)
-$keepaliveTitleMatches = [System.Text.RegularExpressions.Regex]::Matches($bgpNeighborTranscript, $bgpNeighborRuleSpecs[11].Pattern, $bgpTranscriptOptions)
-$nextHopMatches = [System.Text.RegularExpressions.Regex]::Matches($bgpNeighborTranscript, $bgpNeighborRuleSpecs[12].Pattern, $bgpTranscriptOptions)
+Assert-Equal -Actual $lastWriteMatches.Count -Expected 2 -Message 'last write/Last written value rule matches both Cisco variants'
+Assert-Equal -Actual $lastWriteTitleMatches.Count -Expected 1 -Message 'last write title rule matches the lowercase Cisco variant'
+Assert-Equal -Actual $lastWrittenTitleMatches.Count -Expected 1 -Message 'Last written title rule matches the alternate Cisco wording'
+$holdValueMatches = [System.Text.RegularExpressions.Regex]::Matches($bgpNeighborTranscript, $bgpNeighborRuleSpecs[7].Pattern, $bgpTranscriptOptions)
+$holdTitleMatches = [System.Text.RegularExpressions.Regex]::Matches($bgpNeighborTranscript, $bgpNeighborRuleSpecs[8].Pattern, $bgpTranscriptOptions)
+$keepaliveValueMatches = [System.Text.RegularExpressions.Regex]::Matches($bgpNeighborTranscript, $bgpNeighborRuleSpecs[9].Pattern, $bgpTranscriptOptions)
+$keepaliveTitleMatches = [System.Text.RegularExpressions.Regex]::Matches($bgpNeighborTranscript, $bgpNeighborRuleSpecs[10].Pattern, $bgpTranscriptOptions)
+$nextHopMatches = [System.Text.RegularExpressions.Regex]::Matches($bgpNeighborTranscript, $bgpNeighborRuleSpecs[11].Pattern, $bgpTranscriptOptions)
+$stateMatches = [System.Text.RegularExpressions.Regex]::Matches($bgpNeighborTranscript, $bgpNeighborRuleSpecs[12].Pattern, $bgpTranscriptOptions)
 Assert-Equal -Actual $holdValueMatches.Count -Expected 2 -Message 'hold-time value rule matches is and equals IOS variants'
 Assert-Equal -Actual $holdTitleMatches.Count -Expected 2 -Message 'hold-time title rule matches is and equals IOS variants'
 Assert-Equal -Actual $keepaliveValueMatches.Count -Expected 2 -Message 'keepalive value rule matches interval is/equals and seconds'
@@ -1343,15 +1365,19 @@ Assert-True -Condition (($keepaliveValueMatches | ForEach-Object { $_.Value }) -
 Assert-Equal -Actual $nextHopMatches.Count -Expected 2 -Message 'NEXT_HOP rule matches leading and multiple-space Cisco variants'
 Assert-True -Condition (($nextHopMatches | ForEach-Object { $_.Value }) -contains ' NEXT_HOP is always this router for eBGP paths') -Message 'NEXT_HOP rule matches the official Cisco phrase'
 Assert-True -Condition (($nextHopMatches | ForEach-Object { $_.Value }) -contains '    NEXT_HOP   is  always   this router  for   eBGP   paths   ') -Message 'NEXT_HOP rule consumes the complete phrase with trailing spaces'
+Assert-Equal -Actual $stateMatches.Count -Expected 2 -Message 'state=value rule matches mixed-case Cisco neighbor states'
+Assert-True -Condition (($stateMatches | ForEach-Object { $_.Value }) -contains '  state = Established') -Message 'state=value rule includes the mixed-case Established form'
+Assert-True -Condition (($stateMatches | ForEach-Object { $_.Value }) -contains '  STATE = DOWN') -Message 'state=value rule includes the uppercase DOWN form'
 foreach ($falseNeighborSample in @(
         'Neighbor 1.1.1.1, remote AS 2',
         'BGP neighbor is 1.1.1.1, remote AS unknown, internal link',
         'Last read never',
         'last write 00:00',
         'hold time is many',
-        'keepalive interval is 60 sec'
+        'keepalive interval is 60 sec',
+        'state = UNKNOWN'
     )) {
-    foreach ($neighborRule in $bgpNeighborRuleSpecs[0,2,4,6,8,10]) {
+    foreach ($neighborRule in $bgpNeighborRuleSpecs[0,2,4,7,9,12]) {
         Assert-True -Condition (-not [System.Text.RegularExpressions.Regex]::IsMatch(
                 $falseNeighborSample,
                 $neighborRule.Pattern,
@@ -1365,8 +1391,8 @@ foreach ($falseNextHopSample in @(
     )) {
     Assert-True -Condition (-not [System.Text.RegularExpressions.Regex]::IsMatch(
             $falseNextHopSample,
-            $bgpNeighborRuleSpecs[12].Pattern,
+            $bgpNeighborRuleSpecs[11].Pattern,
             [System.Text.RegularExpressions.RegexOptions]::CultureInvariant
         )) -Message "NEXT_HOP rule rejects incomplete or case-mismatched output: $falseNextHopSample"
 }
-Write-Host '[PASS] BGP neighbor remote-AS, read/write, hold-time, keepalive, seconds, and NEXT_HOP rules match IOS variants without malformed values'
+Write-Host '[PASS] BGP neighbor remote-AS, read/write, hold-time, keepalive, state=value, and NEXT_HOP rules match IOS variants without malformed values'

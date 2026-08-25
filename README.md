@@ -6,6 +6,7 @@
 
 - 대소문자를 구분합니다. 파일의 `D:"Match Case"=00000001` 설정에 해당합니다.
 - SecureCRT의 `Keyword List V2`와 `Keyword List V3` 형식을 제공합니다. 두 목록은 같은 320개 규칙을 사용합니다.
+- `show ip bgp`, `show ip bgp summary`, `show ip bgp neighbors`의 전용 규칙이 generic 상태 규칙보다 먼저 적용되며, neighbor `state = ...` 출력도 강조합니다.
 - 정규식 패턴으로 상태 문자열, 숫자, IP 주소, 인터페이스 이름, 프롬프트 등을 하이라이트합니다.
 - 키워드 목록 자체에 설치 스크립트, 자동화 명령, 외부 의존성은 포함하지 않습니다.
 
