@@ -11,6 +11,7 @@ internal static class Program
     // Keep in sync with Install-KeywordHighlight.ps1's $script:UpdateFileNames and launcher/Launcher.csproj (EmbeddedResource).
     private const string ScriptLogicalName = "Install-KeywordHighlight.ps1";
     private const string IniLogicalName = "PNET-Cisco-Dark.ini";
+    private const string IniV3LogicalName = "PNET-Cisco-Dark-V3.ini";
     private const string ChangelogLogicalName = "CHANGELOG.md";
 
     private static int Main(string[] args)
@@ -108,6 +109,7 @@ internal static class Program
 
         var scriptPath = ExtractEmbeddedResource(assembly, ScriptLogicalName, tempDirPath);
         ExtractEmbeddedResource(assembly, IniLogicalName, tempDirPath);
+        ExtractEmbeddedResource(assembly, IniV3LogicalName, tempDirPath);
         ExtractEmbeddedResource(assembly, ChangelogLogicalName, tempDirPath);
 
         return scriptPath;

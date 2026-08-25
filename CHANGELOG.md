@@ -4,6 +4,19 @@
 
 ## [Unreleased]
 
+## [0.1.5-alpha.4] - 2026-08-25
+
+### Added
+
+- 기존 320개 V2 규칙을 보존한 `PNET-Cisco-Dark-V3.ini`를 추가했습니다. V3 행은 V2의 패턴·색상·세 번째 필드를 유지하고 `00000001` 네 번째 필드를 추가합니다.
+- 설치기에서 대화형 V2/V3 선택과 `-KeywordListVersion V2|V3` 자동화 옵션을 지원합니다. Enter 또는 `-Force`에서 생략한 경우 V2를 선택합니다.
+- 런처가 V2와 V3 키워드 파일을 모두 임베드하고 추출하도록 확장했습니다.
+
+### Changed
+
+- V2는 `PNET-Cisco-Dark.ini`, V3는 `PNET-Cisco-Dark-V3.ini`로 SecureCRT Keywords 폴더에 공존할 수 있으며, `Default.ini`의 `Keyword Set`은 선택한 basename을 가리킵니다.
+- self-update와 rollback이 V3 자산을 함께 검증·스테이징하며, 요청한 historical tag에 V3 자산이 없으면 V2로 대체하지 않고 명확한 오류를 냅니다.
+
 ## [0.1.5-alpha.3] - 2026-08-25
 
 ### Fixed

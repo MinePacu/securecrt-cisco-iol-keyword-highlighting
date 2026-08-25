@@ -18,6 +18,9 @@
     <EmbeddedResource Include="../PNET-Cisco-Dark.ini">
       <LogicalName>PNET-Cisco-Dark.ini</LogicalName>
     </EmbeddedResource>
+    <EmbeddedResource Include="../PNET-Cisco-Dark-V3.ini">
+      <LogicalName>PNET-Cisco-Dark-V3.ini</LogicalName>
+    </EmbeddedResource>
     <EmbeddedResource Include="../CHANGELOG.md">
       <LogicalName>CHANGELOG.md</LogicalName>
     </EmbeddedResource>

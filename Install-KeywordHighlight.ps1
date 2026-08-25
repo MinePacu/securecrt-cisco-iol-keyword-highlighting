@@ -3,7 +3,8 @@
     SecureCRT Cisco IOL 키워드 하이라이트 설치/제거 스크립트 (Windows 전용).
 
 .DESCRIPTION
-    PNET-Cisco-Dark.ini를 SecureCRT 설정 폴더의 Keywords 하위 폴더에 설치하고,
+    PNET-Cisco-Dark.ini 또는 PNET-Cisco-Dark-V3.ini를 SecureCRT 설정 폴더의
+    Keywords 하위 폴더에 설치하고,
     Config\Sessions\Default.ini에 기본 터미널/키워드 하이라이트 설정을 적용합니다.
     -Uninstall 스위치로 키워드 파일을 제거하고 최신 백업을 복원하며,
     Default.ini도 스크립트가 만든 최신 백업이 있으면 복원합니다.
@@ -17,8 +18,8 @@
     이 옵션은 자동 업데이트 확인에만 영향을 주며 기본적으로는 사용하지 않습니다.
 
     -RollbackVersion을 지정하면 main 브랜치 self-update를 건너뛰고 해당 Git 태그의
-    PNET-Cisco-Dark.ini만 설치 대상에 적용합니다. 요청한 태그 CHANGELOG의 버전과
-    일치하지 않거나 원격 ini를 검증할 수 없으면 설치하지 않습니다.
+    선택한 키워드 목록 버전(V2 또는 V3)의 자산만 설치 대상에 적용합니다. 요청한
+    태그 CHANGELOG의 버전과 일치하지 않거나 원격 ini를 검증할 수 없으면 설치하지 않습니다.
 
     설정 파일을 수정하기 전에 SecureCRT를 종료하는 것이 좋습니다. -Force를
     사용하면 실행 중 경고와 기존 파일 덮어쓰기 확인을 건너뛰지만, 설정 파일이
@@ -30,6 +31,11 @@
 
 .PARAMETER Force
     SecureCRT 실행 중 경고 프롬프트와 기존 파일 덮어쓰기 확인 프롬프트를 건너뜁니다.
+
+.PARAMETER KeywordListVersion
+    설치하거나 제거할 키워드 목록 버전입니다. V2 또는 V3를 지정할 수 있습니다.
+    생략하면 대화형 실행에서 V2/V3를 묻고, 빈 입력은 V2를 선택합니다. -Force를
+    사용한 실행에서 생략하면 기존 동작과 같이 V2를 선택합니다.
 
 .PARAMETER Uninstall
     설치된 키워드 ini를 제거하고, 존재할 경우 키워드 ini와 Default.ini의
@@ -44,7 +50,7 @@
     main 브랜치의 CHANGELOG.md를 사용하는 기본 동작을 유지합니다.
 
 .PARAMETER RollbackVersion
-    지정한 Semantic Version의 Git 태그에서 PNET-Cisco-Dark.ini를 받아
+    지정한 Semantic Version의 Git 태그에서 선택한 키워드 목록 파일을 받아
     설치 대상 SecureCRT Keywords 파일에만 적용합니다. v0.1.0 또는 0.1.0
     형식을 사용할 수 있으며, -Version을 별칭으로 사용할 수 있습니다.
 
@@ -85,6 +91,10 @@ param(
     [switch]$IncludePrerelease,
 
     [Parameter()]
+    [ValidateSet('V2', 'V3')]
+    [string]$KeywordListVersion,
+
+    [Parameter()]
     [Alias('Version')]
     [string]$RollbackVersion
 )
@@ -98,8 +108,11 @@ $script:UpdateInProgressVariable = 'CRT_CISCO_IOL_KEYWORD_HIGHLIGHT_UPDATE_IN_PR
 $script:UpdateFileNames = @(
     'Install-KeywordHighlight.ps1',
     'PNET-Cisco-Dark.ini',
+    'PNET-Cisco-Dark-V3.ini',
     'CHANGELOG.md'
 )
+
+$script:SelectedKeywordListVersion = $null
 
 function Test-DirectoryExists {
     param([string]$Path)
@@ -109,6 +122,123 @@ function Test-DirectoryExists {
     }
 
     return Test-Path -LiteralPath $Path -PathType Container
+}
+
+function Get-KeywordListFileName {
+    param(
+        [Parameter(Mandatory = $true)]
+        [ValidateSet('V2', 'V3')]
+        [string]$Version
+    )
+
+    if ($Version -eq 'V3') {
+        return 'PNET-Cisco-Dark-V3.ini'
+    }
+
+    return 'PNET-Cisco-Dark.ini'
+}
+
+function Get-KeywordListSetName {
+    param(
+        [Parameter(Mandatory = $true)]
+        [ValidateSet('V2', 'V3')]
+        [string]$Version
+    )
+
+    return [System.IO.Path]::GetFileNameWithoutExtension((Get-KeywordListFileName -Version $Version))
+}
+
+function Resolve-KeywordListVersion {
+    param(
+        [Parameter(Mandatory = $true)][bool]$WasExplicitlyBound,
+        [Parameter(Mandatory = $true)][bool]$NonInteractive
+    )
+
+    if ($WasExplicitlyBound) {
+        return $KeywordListVersion.ToUpperInvariant()
+    }
+
+    if ($NonInteractive) {
+        Write-Host '[정보] -KeywordListVersion이 생략되어 V2를 선택했습니다.'
+        return 'V2'
+    }
+
+    while ($true) {
+        $answer = Read-Host '설치할 키워드 목록 버전을 선택하십시오 (V2/V3, Enter=V2)'
+        if ([string]::IsNullOrWhiteSpace($answer)) {
+            return 'V2'
+        }
+
+        $normalizedAnswer = $answer.Trim().ToUpperInvariant()
+        if ($normalizedAnswer -eq 'V2' -or $normalizedAnswer -eq 'V3') {
+            return $normalizedAnswer
+        }
+
+        Write-Warning '잘못된 키워드 목록 버전입니다. V2 또는 V3를 입력하거나 Enter로 V2를 선택하십시오.'
+    }
+}
+
+function Test-KeywordIniContent {
+    param(
+        [Parameter(Mandatory = $true)][string]$Content,
+        [Parameter(Mandatory = $true)]
+        [ValidateSet('V2', 'V3')]
+        [string]$Version
+    )
+
+    if ([string]::IsNullOrWhiteSpace($Content)) {
+        throw "$Version 키워드 목록 파일이 비어 있습니다."
+    }
+
+    $lines = $Content -split '\r?\n'
+    $rulePattern = if ($Version -eq 'V3') {
+        '^\s+"[^"]*",[^,]+,[^,]+,00000001\s*$'
+    }
+    else {
+        '^\s+"[^"]*",[^,]+,[^,]+\s*$'
+    }
+    $ruleLines = @($lines | Where-Object {
+            [System.Text.RegularExpressions.Regex]::IsMatch(
+                $_,
+                $rulePattern,
+                [System.Text.RegularExpressions.RegexOptions]::CultureInvariant
+            )
+        })
+
+    if ($Version -eq 'V3') {
+        if (@($lines | Where-Object { $_ -match '^D:"Match Case"=00000001\s*$' }).Count -ne 1 -or
+            @($lines | Where-Object { $_ -match '^D:"Regex Line Mode"=00000001\s*$' }).Count -ne 1 -or
+            @($lines | Where-Object { $_ -match '^S:"List Name"=PNET-Cisco-Dark-V3\s*$' }).Count -ne 1) {
+            throw 'V3 키워드 목록의 메타데이터가 예상 형식과 다릅니다.'
+        }
+
+        $v3CountMatch = [System.Text.RegularExpressions.Regex]::Match(
+            $Content,
+            '(?m)^Z:"Keyword List V3"=([0-9A-Fa-f]{8})\s*$')
+        if (-not $v3CountMatch.Success) {
+            throw 'V3 키워드 목록의 항목 수 메타데이터를 찾을 수 없습니다.'
+        }
+
+        $declaredV3Count = [Convert]::ToInt32($v3CountMatch.Groups[1].Value, 16)
+        if ($declaredV3Count -ne $ruleLines.Count) {
+            throw "V3 키워드 목록 항목 수가 일치하지 않습니다: 메타데이터 $declaredV3Count, 실제 $($ruleLines.Count)"
+        }
+    }
+    else {
+        $countMatch = [System.Text.RegularExpressions.Regex]::Match(
+            $Content,
+            '(?m)^Z:"Keyword List V2"=([0-9A-Fa-f]{8})\s*$')
+        if (-not $countMatch.Success) {
+            throw 'V2 키워드 목록의 항목 수 메타데이터를 찾을 수 없습니다.'
+        }
+
+        $declaredCount = [Convert]::ToInt32($countMatch.Groups[1].Value, 16)
+        if ($declaredCount -ne $ruleLines.Count) {
+            throw "V2 키워드 목록 항목 수가 일치하지 않습니다: 메타데이터 $declaredCount, 실제 $($ruleLines.Count)"
+        }
+    }
+
+    return $true
 }
 
 function ConvertTo-SemVer {
@@ -316,18 +446,30 @@ function Get-HighestGitHubRelease {
 }
 
 function Get-RollbackAsset {
-    param([Parameter(Mandatory = $true)][object]$Version)
+    param(
+        [Parameter(Mandatory = $true)][object]$Version,
+        [Parameter(Mandatory = $true)]
+        [ValidateSet('V2', 'V3')]
+        [string]$KeywordListVersion
+    )
 
     # Version has already passed ConvertTo-SemVer before this function is called.
     # Only this validated value is used to construct the Git ref.
     $tagRef = 'v' + $Version.Original
-    $iniFile = Get-GitHubFile -Path 'PNET-Cisco-Dark.ini' -Ref $tagRef
+    $iniFileName = Get-KeywordListFileName -Version $KeywordListVersion
+    try {
+        $iniFile = Get-GitHubFile -Path $iniFileName -Ref $tagRef
+    }
+    catch {
+        throw "GitHub 태그 ${tagRef}에 요청한 $KeywordListVersion 자산($iniFileName)이 없습니다. V2로 대체 설치하지 않습니다. 원본 릴리스에 V3 파일이 포함되어 있는지 확인하십시오. ($($_.Exception.Message))"
+    }
     $changelogFile = Get-GitHubFile -Path 'CHANGELOG.md' -Ref $tagRef
 
-    if ($null -eq $iniFile.Bytes -or $iniFile.Bytes.Length -eq 0 -or
-        [string]::IsNullOrWhiteSpace([string]$iniFile.Text) -or
-        $iniFile.Text -notmatch '(?m)^\s*S:"Keyword List"=') {
-        throw "GitHub 태그 ${tagRef}의 PNET-Cisco-Dark.ini가 비어 있거나 유효한 INI가 아닙니다."
+    try {
+        Test-KeywordIniContent -Content $iniFile.Text -Version $KeywordListVersion | Out-Null
+    }
+    catch {
+        throw "GitHub 태그 ${tagRef}의 $iniFileName 검증에 실패했습니다: $($_.Exception.Message)"
     }
 
     $changelogVersion = Get-ChangelogVersion -Content $changelogFile.Text
@@ -339,8 +481,9 @@ function Get-RollbackAsset {
     }
 
     [PSCustomObject]@{
-        Tag   = $tagRef
-        Bytes = $iniFile.Bytes
+        Tag      = $tagRef
+        FileName = $iniFileName
+        Bytes    = $iniFile.Bytes
     }
 }
 
@@ -604,6 +747,8 @@ function Get-RestartArguments {
     if ($Uninstall) {
         $null = $arguments.Add('-Uninstall')
     }
+    $null = $arguments.Add('-KeywordListVersion')
+    $null = $arguments.Add($script:SelectedKeywordListVersion)
     if ($WhatIfPreference) {
         $null = $arguments.Add('-WhatIf')
     }
@@ -671,8 +816,12 @@ function Invoke-SelfUpdate {
 
         Write-Host "[업데이트] 원격 버전 $($remoteVersion.Original)이 로컬 버전 $($localVersion.Original)보다 최신입니다."
         Test-InstallScriptContent -Content $remoteFiles['Install-KeywordHighlight.ps1'].Text
-        if ($remoteFiles['PNET-Cisco-Dark.ini'].Bytes.Length -eq 0) {
-            throw '원격 PNET-Cisco-Dark.ini가 비어 있습니다.'
+        try {
+            Test-KeywordIniContent -Content $remoteFiles['PNET-Cisco-Dark.ini'].Text -Version 'V2' | Out-Null
+            Test-KeywordIniContent -Content $remoteFiles['PNET-Cisco-Dark-V3.ini'].Text -Version 'V3' | Out-Null
+        }
+        catch {
+            throw "원격 키워드 목록(V2/V3) 검증에 실패했습니다. V3 자산이 없는 릴리스는 설치할 수 없습니다: $($_.Exception.Message)"
         }
         Write-Host '[업데이트] 원격 파일 검증이 완료되었습니다.'
 
@@ -747,6 +896,10 @@ if ($rollbackRequested) {
     }
 }
 
+$script:SelectedKeywordListVersion = Resolve-KeywordListVersion `
+    -WasExplicitlyBound $PSBoundParameters.ContainsKey('KeywordListVersion') `
+    -NonInteractive ([bool]$Force)
+
 # --- 1. Windows 여부 확인 -------------------------------------------------
 $isWindowsOs = $false
 if ($PSVersionTable.PSEdition -eq 'Desktop') {
@@ -769,8 +922,8 @@ if (-not $isWindowsOs) {
 $rollbackAsset = $null
 if ($rollbackRequested) {
     try {
-        $rollbackAsset = Get-RollbackAsset -Version $rollbackSemVer
-        Write-Host "[회귀] GitHub 태그 $($rollbackAsset.Tag)의 PNET-Cisco-Dark.ini를 확인했습니다."
+        $rollbackAsset = Get-RollbackAsset -Version $rollbackSemVer -KeywordListVersion $script:SelectedKeywordListVersion
+        Write-Host "[회귀] GitHub 태그 $($rollbackAsset.Tag)의 $($rollbackAsset.FileName)를 확인했습니다."
     }
     catch {
         $rollbackErrorMessage = '[회귀] 지정한 버전의 설치 자산을 확인하지 못했습니다. 설치를 진행하지 않습니다: ' + $_.Exception.Message
@@ -782,18 +935,24 @@ else {
 }
 
 # --- 2. 소스 ini 파일 확인 (초기에 먼저 확인) -----------------------------
-$sourceIniPath = Join-Path $PSScriptRoot 'PNET-Cisco-Dark.ini'
+$sourceIniFileName = Get-KeywordListFileName -Version $script:SelectedKeywordListVersion
+$sourceIniPath = Join-Path $PSScriptRoot $sourceIniFileName
 if (-not $rollbackRequested -and -not (Test-Path -LiteralPath $sourceIniPath -PathType Leaf)) {
-    Write-Error "원본 파일을 찾을 수 없습니다: $sourceIniPath. 스크립트와 같은 폴더에 PNET-Cisco-Dark.ini가 있는지 확인하십시오."
+    Write-Error "원본 파일을 찾을 수 없습니다: $sourceIniPath. 스크립트와 같은 폴더에 $sourceIniFileName가 있는지 확인하십시오."
     exit 1
 }
 
-$keywordSetName = if ($rollbackRequested) {
-    'PNET-Cisco-Dark'
+if (-not $rollbackRequested) {
+    try {
+        Test-KeywordIniContent -Content ([System.IO.File]::ReadAllText($sourceIniPath)) -Version $script:SelectedKeywordListVersion | Out-Null
+    }
+    catch {
+        Write-Error "원본 $sourceIniFileName 검증에 실패했습니다: $($_.Exception.Message)"
+        exit 1
+    }
 }
-else {
-    [System.IO.Path]::GetFileNameWithoutExtension($sourceIniPath)
-}
+
+$keywordSetName = Get-KeywordListSetName -Version $script:SelectedKeywordListVersion
 if ([string]::IsNullOrWhiteSpace($keywordSetName)) {
     Write-Error "키워드 ini 파일의 basename을 확인할 수 없습니다: $sourceIniPath"
     exit 1
@@ -876,8 +1035,16 @@ if ($secureCrtProcess) {
 
 # --- 5. Keywords/Default.ini 경로 및 옵션 ---------------------------------
 $keywordsPath = Join-Path $resolvedConfigPath 'Keywords'
-$destinationFileName = $keywordSetName + '.ini'
+$destinationFileName = Get-KeywordListFileName -Version $script:SelectedKeywordListVersion
 $destinationIniPath = Join-Path $keywordsPath $destinationFileName
+$defaultBackupFileName = if ($script:SelectedKeywordListVersion -eq 'V3') {
+    'Default.ini.' + $keywordSetName
+}
+else {
+    # Retain the legacy V2 backup name so existing V2 installations remain removable.
+    'Default.ini'
+}
+$defaultBackupPattern = $defaultBackupFileName + '.bak-*'
 
 $iniOptions = @(
     [PSCustomObject]@{ Prefix = 'S'; Name = 'Color Scheme'; Value = 'Birds of Paradise' },
@@ -909,7 +1076,7 @@ try {
             Write-Host "[정보] ${destinationFileName}의 복원할 백업 파일이 없습니다. 현재 파일이 있으면 제거만 수행했습니다."
         }
 
-        $latestDefaultBackup = Get-LatestBackup -Directory $sessionsPath -Pattern 'Default.ini.bak-*'
+        $latestDefaultBackup = Get-LatestBackup -Directory $sessionsPath -Pattern $defaultBackupPattern
         if ($latestDefaultBackup) {
             if ($PSCmdlet.ShouldProcess($defaultIniPath, "$($latestDefaultBackup.Name)에서 Default.ini 복원")) {
                 Restore-BackupAtomic -BackupPath $latestDefaultBackup.FullName -DestinationPath $defaultIniPath
@@ -968,7 +1135,7 @@ try {
     }
 
     if ($defaultIniChanged) {
-        $defaultBackupPath = Get-TimestampBackupPath -Directory $sessionsPath -FileName 'Default.ini'
+        $defaultBackupPath = Get-TimestampBackupPath -Directory $sessionsPath -FileName $defaultBackupFileName
         if ($PSCmdlet.ShouldProcess($defaultIniPath, "백업 생성 ($defaultBackupPath)")) {
             Copy-FileAtomic -Source $defaultIniPath -Destination $defaultBackupPath
         }
