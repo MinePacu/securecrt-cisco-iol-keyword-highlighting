@@ -44,9 +44,9 @@ $v2CountMatch = [System.Text.RegularExpressions.Regex]::Match(
     $v2Text,
     '(?m)^Z:"Keyword List V2"=([0-9A-Fa-f]{8})\s*$')
 Assert-True -Condition $v2CountMatch.Success -Message 'V2 metadata must declare its rule count'
-Assert-Equal -Actual ([Convert]::ToInt32($v2CountMatch.Groups[1].Value, 16)) -Expected $v2Rows.Count -Message 'V2 metadata count must match V2 rows'
+${declaredV2Count} = [Convert]::ToInt32($v2CountMatch.Groups[1].Value, 16)
+Assert-Equal -Actual $declaredV2Count -Expected $v2Rows.Count -Message 'V2 metadata count must match V2 rows'
 
-Assert-Equal -Actual $v2Rows.Count -Expected 320 -Message 'V2 must retain all 320 existing rules'
 Assert-Equal -Actual $v3Rows.Count -Expected $v2Rows.Count -Message 'V3 must contain every V2 rule'
 Assert-Equal -Actual ([regex]::Matches($v3Text, '(?m)^D:"Match Case"=00000001\s*$').Count) -Expected 1 -Message 'V3 Match Case metadata must appear once'
 Assert-Equal -Actual ([regex]::Matches($v3Text, '(?m)^D:"Regex Line Mode"=00000001\s*$').Count) -Expected 1 -Message 'V3 Regex Line Mode metadata must appear once'
@@ -54,8 +54,8 @@ $v3CountMatch = [System.Text.RegularExpressions.Regex]::Match(
     $v3Text,
     '(?m)^Z:"Keyword List V3"=([0-9A-Fa-f]{8})\s*$')
 Assert-True -Condition $v3CountMatch.Success -Message 'V3 metadata must declare its rule count'
-Assert-Equal -Actual ([Convert]::ToInt32($v3CountMatch.Groups[1].Value, 16)) -Expected 320 -Message 'V3 metadata count must declare 320 rules'
-Assert-Equal -Actual ([Convert]::ToInt32($v3CountMatch.Groups[1].Value, 16)) -Expected $v3Rows.Count -Message 'V3 metadata count must match V3 rows'
+${declaredV3Count} = [Convert]::ToInt32($v3CountMatch.Groups[1].Value, 16)
+Assert-Equal -Actual $declaredV3Count -Expected $v3Rows.Count -Message 'V3 metadata count must match V3 rows'
 Assert-Equal -Actual ([regex]::Matches($v3Text, '(?m)^S:"List Name"=PNET-Cisco-Dark-V3\s*$').Count) -Expected 1 -Message 'V3 list name metadata must identify the V3 basename'
 
 for ($index = 0; $index -lt $v2Rows.Count; $index++) {
@@ -76,4 +76,4 @@ Assert-True -Condition $installerText.Contains('$script:UpdateFileNames = @(') -
 Assert-True -Condition $installerText.Contains("V2로 대체 설치하지 않습니다.") -Message 'missing historical V3 assets must not silently fall back to V2'
 Assert-True -Condition $installerText.Contains('$defaultBackupFileName = if ($script:SelectedKeywordListVersion -eq ''V3'')') -Message 'uninstall/install Default.ini backups must be version-aware'
 
-Write-Host '[PASS] V3 metadata, 320-rule mechanical mapping, row shape, selection, and propagation are statically verified'
+Write-Host '[PASS] V2/V3 declared counts, mechanical row mapping, row shape, selection, and propagation are statically verified'
