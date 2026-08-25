@@ -4,6 +4,17 @@
 
 ## [Unreleased]
 
+## [0.1.5-alpha.2] - 2026-08-25
+
+### Added
+
+- `show ip bgp neighbor(s)`의 `NEXT_HOP is always this router for eBGP paths` 문구에서 들여쓰기·다중 공백 변형 및 오탐을 검증하는 회귀 테스트를 추가했습니다.
+
+### Fixed
+
+- `show ip bgp neighbor(s)`의 eBGP 경로에 나타나는 `NEXT_HOP is always this router for eBGP paths` 문구를 색상 강조하도록 보강했습니다.
+- SecureCRT `Keyword List` 메타데이터를 320개로 갱신했습니다.
+
 ## [0.1.5-alpha.1] - 2026-08-25
 
 ### Added

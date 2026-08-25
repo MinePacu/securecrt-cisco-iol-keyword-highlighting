@@ -1285,7 +1285,8 @@ $bgpNeighborRuleSpecs = @(
     @{ Pattern = '(?:^\x20*|\x20+)hold\x20+time\x20+(?:is|=)\x20+[0-9]+\b'; Color = '0000D7FF' },
     @{ Pattern = '(?:^\x20*|\x20+)hold\x20+time\x20+(?:is\b|=)'; Color = '00FACE87' },
     @{ Pattern = '(?:^\x20*|\x20+)keepalive\x20+interval\x20+(?:is|=)\x20+[0-9]+\x20+seconds\b'; Color = '0000D7FF' },
-    @{ Pattern = '(?:^\x20*|\x20+)keepalive\x20+interval\x20+(?:is\b|=)'; Color = '00FACE87' }
+    @{ Pattern = '(?:^\x20*|\x20+)keepalive\x20+interval\x20+(?:is\b|=)'; Color = '00FACE87' },
+    @{ Pattern = '^\x20*NEXT_HOP\x20+is\x20+always\x20+this\x20+router\x20+for\x20+eBGP\x20+paths\x20*$'; Color = '00FFFF00' }
 )
 Assert-True -Condition (-not $bgpNeighborSectionText.Contains('\s')) -Message 'BGP neighbor rules must use SecureCRT literal-space syntax instead of \s'
 Assert-True -Condition (-not $bgpNeighborSectionText.Contains('(?<=')) -Message 'BGP neighbor rules must not depend on lookbehind'
@@ -1306,7 +1307,9 @@ $bgpNeighborTranscript = @(
     'BGP neighbor is *172.16.10.2,  remote AS 45000, external link',
     '  Last read 00:00:39, last write 00:00:00, hold time is 180, keepalive interval is 60 seconds',
     '  Last read 00:00:28, hold time = 90, keepalive interval = 30 seconds',
-    '  Last written 00:00:28, keepalive timer expiry due 00:00:31'
+    '  Last written 00:00:28, keepalive timer expiry due 00:00:31',
+    ' NEXT_HOP is always this router for eBGP paths',
+    '    NEXT_HOP   is  always   this router  for   eBGP   paths   '
 ) -join [Environment]::NewLine
 $neighborRemoteValueMatches = [System.Text.RegularExpressions.Regex]::Matches(
     $bgpNeighborTranscript,
@@ -1331,11 +1334,15 @@ $holdValueMatches = [System.Text.RegularExpressions.Regex]::Matches($bgpNeighbor
 $holdTitleMatches = [System.Text.RegularExpressions.Regex]::Matches($bgpNeighborTranscript, $bgpNeighborRuleSpecs[9].Pattern, $bgpTranscriptOptions)
 $keepaliveValueMatches = [System.Text.RegularExpressions.Regex]::Matches($bgpNeighborTranscript, $bgpNeighborRuleSpecs[10].Pattern, $bgpTranscriptOptions)
 $keepaliveTitleMatches = [System.Text.RegularExpressions.Regex]::Matches($bgpNeighborTranscript, $bgpNeighborRuleSpecs[11].Pattern, $bgpTranscriptOptions)
+$nextHopMatches = [System.Text.RegularExpressions.Regex]::Matches($bgpNeighborTranscript, $bgpNeighborRuleSpecs[12].Pattern, $bgpTranscriptOptions)
 Assert-Equal -Actual $holdValueMatches.Count -Expected 2 -Message 'hold-time value rule matches is and equals IOS variants'
 Assert-Equal -Actual $holdTitleMatches.Count -Expected 2 -Message 'hold-time title rule matches is and equals IOS variants'
 Assert-Equal -Actual $keepaliveValueMatches.Count -Expected 2 -Message 'keepalive value rule matches interval is/equals and seconds'
 Assert-Equal -Actual $keepaliveTitleMatches.Count -Expected 2 -Message 'keepalive title rule matches interval is/equals variants'
 Assert-True -Condition (($keepaliveValueMatches | ForEach-Object { $_.Value }) -contains 'keepalive interval is 60 seconds') -Message 'keepalive value rule includes the seconds phrase and numeric value'
+Assert-Equal -Actual $nextHopMatches.Count -Expected 2 -Message 'NEXT_HOP rule matches leading and multiple-space Cisco variants'
+Assert-True -Condition (($nextHopMatches | ForEach-Object { $_.Value }) -contains ' NEXT_HOP is always this router for eBGP paths') -Message 'NEXT_HOP rule matches the official Cisco phrase'
+Assert-True -Condition (($nextHopMatches | ForEach-Object { $_.Value }) -contains '    NEXT_HOP   is  always   this router  for   eBGP   paths   ') -Message 'NEXT_HOP rule consumes the complete phrase with trailing spaces'
 foreach ($falseNeighborSample in @(
         'Neighbor 1.1.1.1, remote AS 2',
         'BGP neighbor is 1.1.1.1, remote AS unknown, internal link',
@@ -1352,4 +1359,14 @@ foreach ($falseNeighborSample in @(
             )) -Message "Neighbor value rule rejects malformed or incomplete output: $falseNeighborSample"
     }
 }
-Write-Host '[PASS] BGP neighbor remote-AS, read/write, hold-time, keepalive, and seconds rules match IOS variants without malformed values'
+foreach ($falseNextHopSample in @(
+        ' NEXT_HOP is always this router for eBGP',
+        ' NEXT_hop is always this router for eBGP paths'
+    )) {
+    Assert-True -Condition (-not [System.Text.RegularExpressions.Regex]::IsMatch(
+            $falseNextHopSample,
+            $bgpNeighborRuleSpecs[12].Pattern,
+            [System.Text.RegularExpressions.RegexOptions]::CultureInvariant
+        )) -Message "NEXT_HOP rule rejects incomplete or case-mismatched output: $falseNextHopSample"
+}
+Write-Host '[PASS] BGP neighbor remote-AS, read/write, hold-time, keepalive, seconds, and NEXT_HOP rules match IOS variants without malformed values'
