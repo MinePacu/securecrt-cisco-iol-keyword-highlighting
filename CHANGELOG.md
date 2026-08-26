@@ -4,6 +4,13 @@
 
 ## [Unreleased]
 
+## [0.1.6] - 2026-08-26
+
+### Fixed
+
+- Highlighted Cisco `show ip bgp` path-detail attributes and values for `metric`, `localpref`, `valid`, `internal`, `external`, and `best`, including parenthesized metric output, plus `Originator` and `Cluster list` labels and IPv4 values; kept V2/V3 rules synchronized and added regression coverage for the supported forms and false positives. / Cisco `show ip bgp` path-detail의 `metric`, `localpref`, `valid`, `internal`, `external`, `best` 속성과 값을 비롯해 괄호형 metric 출력, `Originator` 및 `Cluster list` 레이블과 IPv4 값을 색상 강조하고, V2/V3 규칙 동기화를 유지하며 지원 형식과 오탐 회귀 검증을 추가했습니다.
+- Highlighted BGP neighbor remote-AS values, internal/external link labels, and `Route-Reflector Client` detail output in both synchronized keyword lists. / 동기화된 두 키워드 목록에서 BGP neighbor의 remote-AS 값, internal/external link 레이블 및 `Route-Reflector Client` 세부 출력을 색상 강조했습니다.
+
 ## [0.1.5] - 2026-08-26
 
 ### Added
