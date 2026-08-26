@@ -4,6 +4,19 @@
 
 ## [Unreleased]
 
+## [0.1.5-alpha.11] - 2026-08-26
+
+### Added
+
+- Added regression coverage for the BGP matcher fixes and summary highlighting updates, and kept the V2/V3 keyword lists synchronized. / BGP 매처 수정 및 summary 하이라이팅 보강에 대한 회귀 검증을 추가했으며, V2/V3 키워드 목록 동기화를 유지했습니다.
+
+### Fixed
+
+- Anchored the BGP RIB-failure `r` matcher so ordinary `r` characters in router and route-map text are no longer colored red. / BGP RIB-failure `r` 매처를 앵커링해 router 및 route-map 텍스트의 일반 `r` 문자가 더 이상 빨간색으로 강조되지 않도록 수정했습니다.
+- Added local BGP router-ID highlighting while preserving the 325-rule V2/V3 lists. / 325개 규칙의 V2/V3 목록을 그대로 유지하면서 local BGP router-ID 하이라이팅을 추가했습니다.
+- Removed color matching for the `i - internal` status-code legend while retaining iBGP route-line `i` and Origin `i`. / iBGP 경로 줄의 `i` 및 Origin `i` 강조는 유지하면서 `i - internal` status-code 범례의 색상 매칭은 제거했습니다.
+- Improved screenshot-style BGP summary local-AS and `AS` header and neighbor matching. / 스크린샷 형태의 BGP summary 출력에서 local-AS와 `AS` 헤더 및 neighbor 매칭을 개선했습니다.
+
 ## [0.1.5-alpha.10] - 2026-08-26
 
 ### Changed

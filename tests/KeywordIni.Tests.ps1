@@ -132,6 +132,40 @@ foreach ($expectedPattern in $expectedPatterns) {
 
 Write-Host '[PASS] OSPF ASBR phrase rules are present with exact yellow highlighting'
 
+$routerIdRule = @{
+    Pattern = '\b(?:Router ID\s+(?:[0-9]{1,3}\.){3}[0-9]{1,3}|local\x20+router\x20+ID\x20+is\x20+(?:[0-9]{1,3}\.){3}[0-9]{1,3})\b'
+    Color = '00FFFF00'
+}
+$routerIdRulePattern = '^\s*"' + [System.Text.RegularExpressions.Regex]::Escape($routerIdRule.Pattern) + '",' + $routerIdRule.Color + ',00000001\s*$'
+$routerIdRuleMatches = [System.Text.RegularExpressions.Regex]::Matches(
+    $sectionText,
+    $routerIdRulePattern,
+    [System.Text.RegularExpressions.RegexOptions]::Multiline -bor
+        [System.Text.RegularExpressions.RegexOptions]::CultureInvariant
+)
+Assert-Equal -Actual $routerIdRuleMatches.Count -Expected 1 -Message 'Router ID rule has exact extended pattern and yellow color'
+foreach ($sample in @(
+        'Router ID 1.1.1.1',
+        'BGP table version is 7, local router ID is 11.11.11.11'
+    )) {
+    Assert-True -Condition ([System.Text.RegularExpressions.Regex]::IsMatch(
+            $sample,
+            $routerIdRule.Pattern,
+            [System.Text.RegularExpressions.RegexOptions]::CultureInvariant
+        )) -Message "Router ID rule matches valid transcript line: $sample"
+}
+foreach ($sample in @(
+        'Router ID 1.1.1',
+        'BGP table version is 7, local router ID is 11.11.11'
+    )) {
+    Assert-True -Condition (-not [System.Text.RegularExpressions.Regex]::IsMatch(
+            $sample,
+            $routerIdRule.Pattern,
+            [System.Text.RegularExpressions.RegexOptions]::CultureInvariant
+        )) -Message "Router ID rule rejects malformed value: $sample"
+}
+Write-Host '[PASS] Router ID rule keeps yellow highlighting and covers local router ID lines'
+
 $areaRules = @(
     @{
         Pattern = '\bArea(?:\x20ID)?\x20+(?:[0-9]+|(?:[0-9]{1,3}\.){3}[0-9]{1,3})\b'
@@ -1080,10 +1114,10 @@ Write-Host '[PASS] show ip protocols distance values match EIGRP internal/extern
 $bgpRouteSectionText = Get-IniSectionText -Lines $lines -SectionName 'BGP_SHOW_IP'
 $bgpRouteRuleSpecs = @(
     @{ Pattern = '\x20+(?:[0-9]{1,3}\.){3}[0-9]{1,3}(?:/[0-9]{1,2})?\x20+(?:[0-9]{1,3}\.){3}[0-9]{1,3}\x20+.*$'; Color = '0000D7FF' },
-    @{ Pattern = '\*(?=\x20*[>rSdhmbxfa]*\x20*i?\x20*(?:[0-9]{1,3}\.){3}[0-9]{1,3}(?:/[0-9]{1,2})?\b)'; Color = '0000FFFF' },
-    @{ Pattern = '>(?=\x20*i?\x20*(?:[0-9]{1,3}\.){3}[0-9]{1,3}(?:/[0-9]{1,2})?\b)'; Color = '0032CD32' },
-    @{ Pattern = 'r(?=\x20*>?\x20*i?\x20*(?:[0-9]{1,3}\.){3}[0-9]{1,3}(?:/[0-9]{1,2})?\b)'; Color = '000000FF' },
-    @{ Pattern = 'i(?=\x20*(?:[0-9]{1,3}\.){3}[0-9]{1,3}(?:/[0-9]{1,2})?\b)'; Color = '00EE82EE' },
+    @{ Pattern = '\*(?=\x20*[>rSdhmbxfa]*\x20*i?\x20*(?:[0-9]{1,3}\.){3}[0-9]{1,3}(?:/[0-9]{1,2})?\b|\x20+valid\b)'; Color = '0000FFFF' },
+    @{ Pattern = '>(?=\x20*i?\x20*(?:[0-9]{1,3}\.){3}[0-9]{1,3}(?:/[0-9]{1,2})?\b|\x20+best\b)'; Color = '0032CD32' },
+    @{ Pattern = '(?:^r(?=\x20*>?\x20*i?\x20*(?:[0-9]{1,3}\.){3}[0-9]{1,3}(?:/[0-9]{1,2})?\b)|r(?=\x20+RIB-failure\b))'; Color = '000000FF' },
+    @{ Pattern = 'i(?=\x20*(?:[0-9]{1,3}\.){3}[0-9]{1,3}(?:/[0-9]{1,2})?\b|\x20+-\x20+internal\b)'; Color = '00EE82EE' },
     @{ Pattern = 'i(?=\x20*$)'; Color = '00FACE87' },
     @{ Pattern = 'i(?=\x20+-\x20+IGP\b)'; Color = '00FACE87' },
     @{ Pattern = '^\x20*Network\x20+Next\x20+Hop\x20+Metric\x20+LocPrf\x20+Weight\x20+Path(?=\x20*$)'; Color = '00FACE87' },
@@ -1105,26 +1139,33 @@ foreach ($bgpRule in $bgpRouteRuleSpecs) {
     Assert-Equal -Actual $ruleMatches.Count -Expected 1 -Message "BGP show-ip rule has exact pattern and color: $($bgpRule.Pattern)"
 }
 
-$bgpRouteTranscript = @(
+$bgpStatusLegendTranscript = @(
     'Status codes: s suppressed, d damped, h history, * valid, > best, i - internal,',
-    '              r RIB-failure, S Stale, m multipath, b backup-path',
-    'Origin codes: i - IGP, e - EGP, ? - incomplete',
-    '      Network          Next Hop            Metric LocPrf Weight  Path',
+    '              r RIB-failure, S Stale, m multipath, b backup-path'
+) -join [Environment]::NewLine
+$bgpRouteHeaderTranscript = '      Network          Next Hop            Metric LocPrf Weight  Path'
+$bgpRouteOnlyTranscript = @(
     '*>i 10.1.1.0/24      192.168.1.2              0             0 65536 i',
     'r>i 4.4.4.4/32      1.1.1.1                 0 0 100 0 1 i',
     '*  10.100.0.0/16    172.16.14.109         2309             0 200 300 e',
     '>  10.102.0.0/16    172.16.14.108         1388             0 100 e'
 ) -join [Environment]::NewLine
+$bgpRouteTranscript = @(
+    $bgpStatusLegendTranscript,
+    'Origin codes: i - IGP, e - EGP, ? - incomplete',
+    $bgpRouteHeaderTranscript,
+    $bgpRouteOnlyTranscript
+) -join [Environment]::NewLine
 $bgpTranscriptOptions = [System.Text.RegularExpressions.RegexOptions]::Multiline -bor
     [System.Text.RegularExpressions.RegexOptions]::CultureInvariant
 $routeValueMatches = [System.Text.RegularExpressions.Regex]::Matches(
-    $bgpRouteTranscript,
+    $bgpRouteOnlyTranscript,
     $bgpRouteRuleSpecs[0].Pattern,
     $bgpTranscriptOptions
 )
 Assert-Equal -Actual $routeValueMatches.Count -Expected 4 -Message 'BGP route value rule matches all screenshot-style route rows'
 $ibgpMatches = [System.Text.RegularExpressions.Regex]::Matches(
-    $bgpRouteTranscript,
+    $bgpRouteOnlyTranscript,
     $bgpRouteRuleSpecs[4].Pattern,
     $bgpTranscriptOptions
 )
@@ -1146,7 +1187,7 @@ Assert-True -Condition (-not [System.Text.RegularExpressions.Regex]::IsMatch(
 $metricHeaderPatterns = $bgpRouteRuleSpecs[7..10].Pattern
 foreach ($metricHeaderPattern in $metricHeaderPatterns) {
     $headerMatches = [System.Text.RegularExpressions.Regex]::Matches(
-        ($bgpRouteTranscript -split [Environment]::NewLine)[3],
+        $bgpRouteHeaderTranscript,
         $metricHeaderPattern,
         [System.Text.RegularExpressions.RegexOptions]::CultureInvariant
     )
@@ -1159,14 +1200,17 @@ $statusRuleSpecs = @(
 )
 foreach ($statusRule in $statusRuleSpecs) {
     $statusMatches = [System.Text.RegularExpressions.Regex]::Matches(
-        $bgpRouteTranscript,
+        $bgpRouteOnlyTranscript,
         $statusRule.Pattern,
         $bgpTranscriptOptions
     )
     Assert-Equal -Actual $statusMatches.Count -Expected $statusRule.ExpectedCount -Message "$($statusRule.Name) rule matches only BGP route status positions"
     foreach ($falseStatusSample in @(
-            'show ip bgp > 10.1.1.0/24',
-            'Status codes: * valid',
+            'status summary without a route marker',
+            'show ip bgp > next-hop',
+            'prefix r not-a-prefix',
+            'BGP router identifier 11.11.11.11, local AS number 2',
+            'BGP route-map cache entries using 0 bytes of memory',
             'prefix r 10.1.1.0/24',
             '* - candidate default'
         )) {
@@ -1178,17 +1222,43 @@ foreach ($statusRule in $statusRuleSpecs) {
     }
 }
 $bestStatusValues = [System.Text.RegularExpressions.Regex]::Matches(
-    $bgpRouteTranscript,
+    $bgpRouteOnlyTranscript,
     $bgpRouteRuleSpecs[2].Pattern,
     $bgpTranscriptOptions
 ) | ForEach-Object { $_.Value }
 Assert-True -Condition ($bestStatusValues -contains '>') -Message 'best > rule still matches the standalone > status marker'
 $validStatusValues = [System.Text.RegularExpressions.Regex]::Matches(
-    $bgpRouteTranscript,
+    $bgpRouteOnlyTranscript,
     $bgpRouteRuleSpecs[1].Pattern,
     $bgpTranscriptOptions
 ) | ForEach-Object { $_.Value }
 Assert-True -Condition ($validStatusValues -contains '*') -Message 'valid * rule still matches the standalone * status marker'
+$legendRuleSpecs = @(
+    @{ Name = 'valid * legend'; RuleIndex = 1; Token = '*'; Color = '0000FFFF' },
+    @{ Name = 'best > legend'; RuleIndex = 2; Token = '>'; Color = '0032CD32' },
+    @{ Name = 'RIB-failure r legend'; RuleIndex = 3; Token = 'r'; Color = '000000FF' }
+)
+foreach ($legendRule in $legendRuleSpecs) {
+    $rule = $bgpRouteRuleSpecs[$legendRule.RuleIndex]
+    Assert-Equal -Actual $rule.Color -Expected $legendRule.Color -Message "$($legendRule.Name) must use its table status color"
+    $legendMatches = [System.Text.RegularExpressions.Regex]::Matches(
+        $bgpStatusLegendTranscript,
+        $rule.Pattern,
+        $bgpTranscriptOptions
+    )
+    Assert-Equal -Actual $legendMatches.Count -Expected 1 -Message "$($legendRule.Name) must match exactly one Status codes legend token"
+    Assert-Equal -Actual $legendMatches[0].Value -Expected $legendRule.Token -Message "$($legendRule.Name) must match only its status marker"
+}
+Assert-Equal -Actual ([System.Text.RegularExpressions.Regex]::Matches(
+        $bgpStatusLegendTranscript,
+        $bgpRouteRuleSpecs[4].Pattern,
+        $bgpTranscriptOptions
+    ).Count) -Expected 0 -Message 'iBGP status i rule must not match the i - internal Status codes legend'
+Assert-True -Condition (-not [System.Text.RegularExpressions.Regex]::IsMatch(
+        $bgpStatusLegendTranscript,
+        $bgpRouteRuleSpecs[6].Pattern,
+        $bgpTranscriptOptions
+    )) -Message 'Origin i - IGP rule must not consume the i - internal Status codes legend'
 $routeRuleOrderText = $bgpRouteSectionText
 Assert-True -Condition ($routeRuleOrderText.IndexOf($bgpRouteRuleSpecs[4].Pattern) -lt $routeRuleOrderText.IndexOf($bgpRouteRuleSpecs[6].Pattern)) -Message 'iBGP route rule must precede the origin legend rule'
 Assert-True -Condition ($iniText.IndexOf('"[*]BGP_SHOW_IP",00FFFFFF,00000001') -lt $iniText.IndexOf('"[*]CRITICAL_ERRORS_AND_DOWN_STATES",00FFFFFF,00000001')) -Message 'BGP-specific sections must appear before generic state rules'
@@ -1196,12 +1266,12 @@ Write-Host '[PASS] BGP show-ip status, origin, and metric fields match Cisco rou
 
 $bgpSummarySectionText = Get-IniSectionText -Lines $lines -SectionName 'BGP_SHOW_IP_SUMMARY'
 $bgpSummaryRuleSpecs = @(
-    @{ Pattern = '^\x20*BGP\x20+router\x20+identifier\x20+(?:[0-9]{1,3}\.){3}[0-9]{1,3},\x20+local\x20+AS\x20+number\x20+(?:[0-9]{1,5}\.[0-9]{1,5}|[0-9]{1,10})\b'; Color = '0000D7FF' },
+    @{ Pattern = '(?:^|\x20)local\x20+AS\x20+number\x20+(?:[0-9]{1,5}\.[0-9]{1,5}|[0-9]{1,10})\x20*$'; Color = '0000D7FF' },
     @{ Pattern = '^\x20*BGP\x20+router\x20+identifier\x20+(?:[0-9]{1,3}\.){3}[0-9]{1,3},\x20+local\x20+AS\x20+number\b'; Color = '00FACE87' },
     @{ Pattern = '^\x20*Neighbor\x20+V\x20+AS\x20+MsgRcvd\x20+MsgSent\x20+TblVer\x20+InQ\x20+OutQ\x20+Up/Down\x20+State(?:/PfxRcd)?\x20*$'; Color = '00FACE87' },
     @{ Pattern = '^\x20*Neighbor\x20+V(?=\x20+AS\x20+MsgRcvd\b)'; Color = '00FACE87' },
-    @{ Pattern = '^\x20*Neighbor\x20+V\x20+AS(?=\x20+MsgRcvd\b)'; Color = '00FACE87' },
-    @{ Pattern = '^\x20*Neighbor\x20+V\x20+AS\x20+MsgRcvd\x20+MsgSent\x20+TblVer\x20+InQ\x20+OutQ\x20+Up/Down\x20+State(?=\x2fPfxRcd\b|\x20*$)'; Color = '00FACE87' },
+    @{ Pattern = '\bAS(?=\x20+MsgRcvd\b)'; Color = '00FACE87' },
+    @{ Pattern = 'MsgRcvd\x20+MsgSent\x20+TblVer\x20+InQ\x20+OutQ\x20+Up/Down\x20+State(?=\x2fPfxRcd\b|\x20*$)'; Color = '00FACE87' },
     @{ Pattern = '^\x20*/PfxRcd\x20*$'; Color = '00FACE87' },
     @{ Pattern = '^\x20*\*?(?:[0-9]{1,3}\.){3}[0-9]{1,3}\x20+[0-9]+\x20+(?:[0-9]{1,5}\.[0-9]{1,5}|[0-9]{1,10})\x20+[0-9]+\x20+[0-9]+\x20+[0-9]+\x20+[0-9]+(?:\x20+[0-9]+)?\x20+(?:[0-9]{2}:[0-9]{2}:[0-9]{2}|never)\x20+(?:[0-9]+|Idle(?:\x20+\(Admin\))?|Active|Connect|OpenSent|OpenConfirm|Established|PfxRcd)\x20*$'; Color = '0000D7FF' }
 )
@@ -1236,6 +1306,12 @@ $summaryLocalValueMatches = [System.Text.RegularExpressions.Regex]::Matches(
     $bgpTranscriptOptions
 )
 Assert-Equal -Actual $summaryLocalValueMatches.Count -Expected 2 -Message 'Summary local AS value rule matches asplain and asdot 2/4-byte ASNs'
+Assert-True -Condition (($summaryLocalValueMatches | ForEach-Object { $_.Value }) -contains ' local AS number 45000') -Message 'Summary local AS value rule matches the local-AS suffix inside the full router-ID line'
+Assert-True -Condition ([System.Text.RegularExpressions.Regex]::IsMatch(
+        'local AS number 2',
+        $bgpSummaryRuleSpecs[0].Pattern,
+        [System.Text.RegularExpressions.RegexOptions]::CultureInvariant
+    )) -Message 'Summary local AS value rule matches the exact local AS number 2 phrase'
 $summaryLocalTitleMatches = [System.Text.RegularExpressions.Regex]::Matches(
     $bgpSummaryTranscript,
     $bgpSummaryRuleSpecs[1].Pattern,
@@ -1257,6 +1333,11 @@ foreach ($headerRule in $bgpSummaryRuleSpecs[3..5]) {
     )
     Assert-Equal -Actual $headerMatches.Count -Expected 2 -Message "Summary $($headerRule.Pattern) title rule matches both header variants"
 }
+Assert-True -Condition ([System.Text.RegularExpressions.Regex]::IsMatch(
+        'AS MsgRcvd',
+        $bgpSummaryRuleSpecs[4].Pattern,
+        [System.Text.RegularExpressions.RegexOptions]::CultureInvariant
+    )) -Message 'Summary AS title rule matches the exact AS header token'
 $summaryWrapMatches = [System.Text.RegularExpressions.Regex]::Matches(
     $bgpSummaryTranscript,
     $bgpSummaryRuleSpecs[6].Pattern,
@@ -1271,6 +1352,37 @@ $summaryValueMatches = [System.Text.RegularExpressions.Regex]::Matches(
 Assert-Equal -Actual $summaryValueMatches.Count -Expected 3 -Message 'Summary value rule matches standard, asdot, and IOL compact rows'
 Assert-True -Condition (($summaryValueMatches | ForEach-Object { $_.Value }) -contains '*192.168.3.2    4 50000       2       2        0    0    0 00:00:37        0') -Message 'Summary value rule includes dynamic-neighbor rows'
 Assert-True -Condition (($summaryValueMatches | ForEach-Object { $_.Value }) -contains '10.1.1.1 4 2 5 6 0 0 00:52:39 2') -Message 'Summary value rule includes the screenshot-style compact row'
+$bgpSummaryScreenshotTranscript = @(
+    'BGP router identifier 11.11.11.11, local AS number 2',
+    'BGP table version is 7, main routing table version 7',
+    'Neighbor        V          AS MsgRcvd MsgSent   TblVer  InQ OutQ Up/Down  State/PfxRcd',
+    '2.2.2.2         4          2  28      30       7       0    0    00:24:19 1',
+    '5.5.5.5         4          2  28      30       7       0    0    00:22:57 1',
+    '10.1.14.4       4          1  32      32       7       0    0    00:25:10 1',
+    '10.1.23.3       4          2  21      19       7       0    0    00:08:21 2'
+) -join [Environment]::NewLine
+Assert-True -Condition ([System.Text.RegularExpressions.Regex]::IsMatch(
+        $bgpSummaryScreenshotTranscript,
+        $bgpSummaryRuleSpecs[0].Pattern,
+        $bgpTranscriptOptions
+    )) -Message 'Summary local AS value rule matches the screenshot local AS number 2 line'
+Assert-True -Condition ([System.Text.RegularExpressions.Regex]::IsMatch(
+        $bgpSummaryScreenshotTranscript,
+        $bgpSummaryRuleSpecs[4].Pattern,
+        $bgpTranscriptOptions
+    )) -Message 'Summary AS title rule matches the screenshot header AS token'
+foreach ($neighborRow in @(
+        '2.2.2.2         4          2  28      30       7       0    0    00:24:19 1',
+        '5.5.5.5         4          2  28      30       7       0    0    00:22:57 1',
+        '10.1.14.4       4          1  32      32       7       0    0    00:25:10 1',
+        '10.1.23.3       4          2  21      19       7       0    0    00:08:21 2'
+    )) {
+    Assert-True -Condition ([System.Text.RegularExpressions.Regex]::IsMatch(
+            $neighborRow,
+            $bgpSummaryRuleSpecs[7].Pattern,
+            [System.Text.RegularExpressions.RegexOptions]::CultureInvariant
+        )) -Message "Summary value rule matches screenshot neighbor row: $neighborRow"
+}
 foreach ($falseSummarySample in @(
         'V AS MsgRcvd MsgSent',
         'not-a-neighbor V 50000 2 2 0 0 0 00:00:37 0',
