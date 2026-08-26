@@ -40,6 +40,9 @@ $v3Lines = @($v3Text -split '\r?\n')
 $v2Rows = @($v2Lines | Where-Object { $_ -match '^\s+"' })
 $v3Rows = @($v3Lines | Where-Object { $_ -match '^\s+"' })
 
+Assert-Equal -Actual $v2Rows.Count -Expected 325 -Message 'V2 must retain exactly 325 keyword rows'
+Assert-Equal -Actual $v3Rows.Count -Expected 325 -Message 'V3 must retain exactly 325 keyword rows'
+
 $v2CountMatch = [System.Text.RegularExpressions.Regex]::Match(
     $v2Text,
     '(?m)^Z:"Keyword List V2"=([0-9A-Fa-f]{8})\s*$')
@@ -64,6 +67,50 @@ for ($index = 0; $index -lt $v2Rows.Count; $index++) {
             '^\s+"[^"]*",[^,]+,[^,]+,00000001\s*$')) -Message "V3 row $index must have four fields and a 00000001 fourth field"
     Assert-Equal -Actual $v3Rows[$index] -Expected ($v2Rows[$index] + ',00000001') -Message "V3 row $index must preserve the V2 row and append only the fourth field"
 }
+
+function Get-SectionOrder {
+    param([Parameter(Mandatory = $true)][string[]]$Lines)
+
+    return @(
+        foreach ($line in $Lines) {
+            $match = [regex]::Match($line, '^\s+"\[\*(?<name>[^"]+)",')
+            if ($match.Success) {
+                $match.Groups['name'].Value
+            }
+        }
+    )
+}
+
+$expectedSectionOrder = @(
+    'BGP_SHOW_IP',
+    'CRITICAL_ERRORS_AND_DOWN_STATES',
+    'GOOD_AND_INTERFACE_STATES',
+    'STP_RAPID_PVST_MST',
+    'ETHERCHANNEL',
+    'HSRP',
+    'OSPF_PROCESS_AREA_AND_IDS',
+    'OSPF_COST_METRIC_REFERENCE_BW',
+    'OSPF_ROUTE_TYPES',
+    'ROUTING_TABLE_CODES_AND_METRICS',
+    'ROUTING_TABLE_SUMMARY_DISCARD',
+    'OSPF_NETWORK_TYPE_AND_DR_BDR',
+    'OSPF_NEIGHBOR_STATES',
+    'OSPF_TIMERS',
+    'OSPF_LSDB_AND_LSA',
+    'OSPF_SPF_AND_CONFIG',
+    'OSPF_VIRTUAL_LINKS',
+    'VLAN_TRUNK_AND_LAYER2',
+    'INTERFACES_ADDRESSES_AND_IDENTIFIERS',
+    'ROUTING_REDISTRIBUTION',
+    'ROUTING_PROTOCOL_DISTANCE',
+    'ROUTING_PROTOCOLS_AND_MISC',
+    'BGP_SHOW_IP_SUMMARY',
+    'BGP_SHOW_IP_NEIGHBORS',
+    'PROMPTS'
+)
+Assert-Equal -Actual ((Get-SectionOrder -Lines $v2Lines) -join '|') -Expected ($expectedSectionOrder -join '|') -Message 'V2 sections must retain alpha-4 ordering with BGP summary and neighbor blocks late'
+Assert-Equal -Actual ((Get-SectionOrder -Lines $v3Lines) -join '|') -Expected ($expectedSectionOrder -join '|') -Message 'V3 sections must retain alpha-4 ordering with BGP summary and neighbor blocks late'
+Write-Host '[PASS] V2/V3 BGP summary and neighbor sections retain alpha-4 late-file ordering'
 
 $installerText = [System.IO.File]::ReadAllText($installerPath)
 Assert-True -Condition $installerText.Contains("[ValidateSet('V2', 'V3')]") -Message 'installer must expose a V2/V3 ValidateSet parameter'

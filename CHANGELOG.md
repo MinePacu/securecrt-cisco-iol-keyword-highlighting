@@ -4,6 +4,12 @@
 
 ## [Unreleased]
 
+## [0.1.5-alpha.9] - 2026-08-26
+
+### Fixed
+
+- Restored alpha-4 ordering for the BGP summary and neighbor rule blocks in both V2 and V3 keyword lists while preserving all 325 rules. / V2와 V3 키워드 목록의 325개 규칙을 그대로 보존하면서 BGP summary 및 neighbor 규칙 블록을 alpha-4 순서로 복원했습니다.
+
 ## [0.1.5-alpha.8] - 2026-08-26
 
 ### Changed
