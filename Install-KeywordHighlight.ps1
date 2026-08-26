@@ -9,15 +9,16 @@
     -Uninstall 스위치로 키워드 파일을 제거하고 최신 백업을 복원하며,
     Default.ini도 스크립트가 만든 최신 백업이 있으면 복원합니다.
 
-    실행할 때 공개 저장소의 main 브랜치에 더 최신 버전이 있으면 설치 자산을
-    갱신한 뒤 같은 인자로 이 스크립트를 다시 실행합니다. 원격 확인이나
-    업데이트에 실패해도 기존 로컬 설치는 계속합니다.
+    실행할 때 공개 저장소의 GitHub Releases에서 가장 높은 유효한 published
+    non-draft stable 릴리스를 선택해 설치 자산을 갱신한 뒤 같은 인자로 이
+    스크립트를 다시 실행합니다. 원격 확인이나 업데이트에 실패해도 기존
+    로컬 설치는 계속합니다.
 
-    -IncludePrerelease를 지정하면 GitHub Releases에서 draft가 아닌 릴리스를
-    확인하고, stable/prerelease를 포함한 가장 높은 Semantic Version을 선택합니다.
-    이 옵션은 자동 업데이트 확인에만 영향을 주며 기본적으로는 사용하지 않습니다.
+    기본 self-update는 GitHub가 prerelease로 표시하지 않고 태그의 Semantic
+    Version에도 prerelease 식별자가 없는 stable 릴리스만 선택합니다.
+    -IncludePrerelease를 지정한 경우에만 비-draft prerelease 릴리스를 포함합니다.
 
-    -RollbackVersion을 지정하면 main 브랜치 self-update를 건너뛰고 해당 Git 태그의
+    -RollbackVersion을 지정하면 일반 self-update를 건너뛰고 해당 Git 태그의
     선택한 키워드 목록 버전(V2 또는 V3)의 자산만 설치 대상에 적용합니다. 요청한
     태그 CHANGELOG의 버전과 일치하지 않거나 원격 ini를 검증할 수 없으면 설치하지 않습니다.
 
@@ -44,9 +45,9 @@
     원격 버전 확인과 self-update를 건너뜁니다.
 
 .PARAMETER IncludePrerelease
-    자동 업데이트 확인에 GitHub Releases의 prerelease를 포함합니다. draft가 아닌
-    릴리스 중 가장 높은 유효한 Semantic Version을 선택하며, 지정하지 않으면
-    main 브랜치의 CHANGELOG.md를 사용하는 기본 동작을 유지합니다.
+    자동 업데이트 확인에 GitHub Releases의 prerelease를 포함하는 명시적 opt-in입니다.
+    지정하지 않으면 published non-draft stable 릴리스 중 가장 높은 유효한
+    Semantic Version을 선택합니다.
 
 .PARAMETER RollbackVersion
     지정한 Semantic Version의 Git 태그에서 선택한 키워드 목록 파일을 받아
@@ -391,19 +392,35 @@ function Get-HighestGitHubRelease {
         [switch]$IncludePrerelease
     )
 
-    $releasesUri = 'https://api.github.com/repos/{0}/releases?per_page=100' -f $script:UpdateRepository
+    $pageSize = 100
+    $releasesUri = 'https://api.github.com/repos/{0}/releases?per_page={1}' -f $script:UpdateRepository, $pageSize
     $headers = @{
         Accept      = 'application/vnd.github+json'
         'User-Agent' = 'CRT-Cisco-IOL-Highlight-Installer'
     }
 
-    $releases = Invoke-RestMethod -Uri $releasesUri -Method Get -Headers $headers -TimeoutSec 15
+    $pageNumber = 1
+    $releases = @()
+    while ($true) {
+        $pageUri = '{0}&page={1}' -f $releasesUri, $pageNumber
+        $pageReleases = @(Invoke-RestMethod -Uri $pageUri -Method Get -Headers $headers -TimeoutSec 15)
+        if ($pageReleases.Count -eq 0) {
+            break
+        }
+
+        $releases += $pageReleases
+        if ($pageReleases.Count -lt $pageSize) {
+            break
+        }
+
+        $pageNumber++
+    }
+
     $selectedRelease = $null
     $selectedVersion = $null
 
     foreach ($release in @($releases)) {
-        if ($null -eq $release -or $release.draft -or
-            (-not $IncludePrerelease -and $release.prerelease)) {
+        if ($null -eq $release -or $release.draft) {
             continue
         }
 
@@ -416,6 +433,11 @@ function Get-HighestGitHubRelease {
             $releaseVersion = ConvertTo-SemVer -Version $tagName
         }
         catch {
+            continue
+        }
+
+        if (-not $IncludePrerelease -and
+            ($release.prerelease -or @($releaseVersion.PreRelease).Count -gt 0)) {
             continue
         }
 

@@ -4,114 +4,26 @@
 
 ## [Unreleased]
 
-## [0.1.5-alpha.12] - 2026-08-26
+## [0.1.5] - 2026-08-26
 
 ### Added
 
-- Added regression coverage for standalone `Idle` and `Idle (Admin)` highlighting in `show ip bgp summary`. / `show ip bgp summary`에서 standalone `Idle` 및 `Idle (Admin)` 하이라이팅에 대한 회귀 검증을 추가했습니다.
-
-### Fixed
-
-- Highlighted standalone `Idle` in `show ip bgp summary` alongside the existing `Idle (Admin)` screenshot-style state matching. / 기존 `Idle (Admin)` 스크린샷형 상태 매칭과 함께 `show ip bgp summary`의 standalone `Idle`도 강조되도록 수정했습니다.
-
-## [0.1.5-alpha.11] - 2026-08-26
-
-### Added
-
-- Added regression coverage for the BGP matcher fixes and summary highlighting updates, and kept the V2/V3 keyword lists synchronized. / BGP 매처 수정 및 summary 하이라이팅 보강에 대한 회귀 검증을 추가했으며, V2/V3 키워드 목록 동기화를 유지했습니다.
-
-### Fixed
-
-- Anchored the BGP RIB-failure `r` matcher so ordinary `r` characters in router and route-map text are no longer colored red. / BGP RIB-failure `r` 매처를 앵커링해 router 및 route-map 텍스트의 일반 `r` 문자가 더 이상 빨간색으로 강조되지 않도록 수정했습니다.
-- Added local BGP router-ID highlighting while preserving the 325-rule V2/V3 lists. / 325개 규칙의 V2/V3 목록을 그대로 유지하면서 local BGP router-ID 하이라이팅을 추가했습니다.
-- Removed color matching for the `i - internal` status-code legend while retaining iBGP route-line `i` and Origin `i`. / iBGP 경로 줄의 `i` 및 Origin `i` 강조는 유지하면서 `i - internal` status-code 범례의 색상 매칭은 제거했습니다.
-- Improved screenshot-style BGP summary local-AS and `AS` header and neighbor matching. / 스크린샷 형태의 BGP summary 출력에서 local-AS와 `AS` 헤더 및 neighbor 매칭을 개선했습니다.
-
-## [0.1.5-alpha.10] - 2026-08-26
+- Added the V3 keyword list alongside V2, with V3 metadata and SecureCRT-compatible mappings, while preserving the synchronized 325-rule lists. / V2와 함께 V3 키워드 목록을 추가하고 V3 메타데이터와 SecureCRT 호환 매핑을 제공하면서 동기화된 325개 규칙을 유지했습니다.
+- Added explicit V2/V3 installer selection, V2/V3 coexistence, launcher embedding/extraction, tagged rollback validation, and regression coverage for the installer, keyword metadata, BGP output, and V2/V3 synchronization. / 설치기의 V2/V3 명시 선택, V2/V3 공존, 런처 임베드·추출, 태그 rollback 검증과 설치기·키워드 메타데이터·BGP 출력·V2/V3 동기화 회귀 검증을 추가했습니다.
 
 ### Changed
 
-- Omitted `-KeywordListVersion` now automatically selects V3 without showing a V2/V3 prompt; explicit V2/V3 selection remains supported. / `-KeywordListVersion`을 생략하면 V2/V3 선택 프롬프트 없이 V3를 자동 선택하며, V2/V3 명시 선택은 계속 지원합니다.
+- Omitted, blank-input, and `-Force` keyword-list selection now defaults to V3 without a prompt; explicit `-KeywordListVersion V2` or `V3` remains supported. / 키워드 목록 선택을 생략하거나 빈 입력 또는 `-Force`로 실행하면 프롬프트 없이 V3를 기본 선택하며, `-KeywordListVersion V2` 또는 `V3` 명시는 계속 지원합니다.
+- Restored the alpha-4 late-file ordering for BGP summary and neighbor rules, split the long `show ip neighbors` state matcher into four shorter rules, and removed internal blank lines from V2/V3 files. / BGP summary 및 neighbor 규칙을 alpha-4의 파일 후반 순서로 복원하고, 긴 `show ip neighbors` state 매처를 네 개의 짧은 규칙으로 분리했으며, V2/V3 파일의 내부 빈 줄을 제거했습니다.
+- Hardened production self-update to scan paginated GitHub Releases, reject draft and SemVer prerelease tags on the stable channel, and retain tag/CHANGELOG validation; prerelease selection remains an explicit `-IncludePrerelease` opt-in. / 정식 self-update가 페이지를 넘겨 GitHub Releases를 검색하고 stable 채널에서 draft 및 SemVer prerelease 태그를 제외하며 tag/CHANGELOG 검증을 유지하도록 강화했으며, prerelease 선택은 명시적인 `-IncludePrerelease`로만 허용합니다.
 
 ### Fixed
 
-- Removed internal blank separator lines from the V2/V3 keyword INI files and added validation to reject them. / V2/V3 키워드 INI 파일의 내부 빈 구분 줄을 제거하고 이를 거부하는 검증을 추가했습니다.
-
-## [0.1.5-alpha.9] - 2026-08-26
-
-### Fixed
-
-- Restored alpha-4 ordering for the BGP summary and neighbor rule blocks in both V2 and V3 keyword lists while preserving all 325 rules. / V2와 V3 키워드 목록의 325개 규칙을 그대로 보존하면서 BGP summary 및 neighbor 규칙 블록을 alpha-4 순서로 복원했습니다.
-
-## [0.1.5-alpha.8] - 2026-08-26
-
-### Changed
-
-- Changed the omitted, blank-input, and `-Force` keyword-list default from V2 to V3; explicit `-KeywordListVersion V2` remains supported. / 키워드 목록 버전을 생략하거나 빈 입력 또는 `-Force`로 실행할 때의 기본값을 V2에서 V3로 변경했으며, 명시적인 `-KeywordListVersion V2`는 계속 지원합니다.
-
-## [0.1.5-alpha.7] - 2026-08-26
-
-### Fixed
-
-- Separated Cisco BGP route status markers and refined BGP header/value highlighting for tested IOS/IOL output in the V2 and V3 keyword lists.
-
-## [0.1.5-alpha.6] - 2026-08-25
-
-### Fixed
-
-- `show ip neighbors`의 `state = ...` 상태 정규식을 네 개의 짧은 규칙으로 분리해 SecureCRT의 긴 정규식 파서 회귀를 방지했습니다.
-- V2/V3 키워드 목록의 상태 규칙과 항목 수 메타데이터를 동기화하고, 모든 상태 표기와 V3 매핑에 대한 회귀 검증을 추가했습니다.
-
-## [0.1.5-alpha.5] - 2026-08-25
-
-### Fixed
-
-- BGP 전용 규칙의 우선순서를 generic 상태 규칙보다 앞으로 복구하고, `show ip bgp summary`의 neighbor `V` 값과 `show ip bgp neighbors`의 `state = ...` 출력을 다시 강조하도록 정리했습니다.
-- `show ip bgp`의 iBGP `i` 규칙이 `*>`/`r>` 상태 접두사를 함께 먹지 않고, 경로 줄의 단일 `i` 마커만 따로 강조하도록 조정했습니다.
-
-## [0.1.5-alpha.4] - 2026-08-25
-
-### Added
-
-- 기존 320개 V2 규칙을 보존한 `PNET-Cisco-Dark-V3.ini`를 추가했습니다. V3 행은 V2의 패턴·색상·세 번째 필드를 유지하고 `00000001` 네 번째 필드를 추가합니다.
-- 설치기에서 대화형 V2/V3 선택과 `-KeywordListVersion V2|V3` 자동화 옵션을 지원합니다. Enter 또는 `-Force`에서 생략한 경우 V2를 선택합니다.
-- 런처가 V2와 V3 키워드 파일을 모두 임베드하고 추출하도록 확장했습니다.
-
-### Changed
-
-- V2는 `PNET-Cisco-Dark.ini`, V3는 `PNET-Cisco-Dark-V3.ini`로 SecureCRT Keywords 폴더에 공존할 수 있으며, `Default.ini`의 `Keyword Set`은 선택한 basename을 가리킵니다.
-- self-update와 rollback이 V3 자산을 함께 검증·스테이징하며, 요청한 historical tag에 V3 자산이 없으면 V2로 대체하지 않고 명확한 오류를 냅니다.
-
-## [0.1.5-alpha.3] - 2026-08-25
-
-### Fixed
-
-- 런처가 `%TEMP%\Install-KeywordHighlight-Setup`에 기존 파일이 있어도 최신 임베디드 설치 파일로 덮어쓰도록 수정했습니다.
-
-## [0.1.5-alpha.2] - 2026-08-25
-
-### Added
-
-- `show ip bgp neighbor(s)`의 `NEXT_HOP is always this router for eBGP paths` 문구에서 들여쓰기·다중 공백 변형 및 오탐을 검증하는 회귀 테스트를 추가했습니다.
-
-### Fixed
-
-- `show ip bgp neighbor(s)`의 eBGP 경로에 나타나는 `NEXT_HOP is always this router for eBGP paths` 문구를 색상 강조하도록 보강했습니다.
-- SecureCRT `Keyword List` 메타데이터를 320개로 갱신했습니다.
-
-## [0.1.5-alpha.1] - 2026-08-25
-
-### Added
-
-- Cisco BGP 출력과 키워드 목록 메타데이터를 검증하는 관련 회귀 테스트를 추가하고, `Keyword List` 메타데이터를 갱신했습니다.
-
-### Fixed
-
-- Cisco `show ip bgp`의 `>`, `r`, `*` 상태 코드를 서로 다른 색상으로 구분하고, Origin codes의 `i`와 경로 행의 iBGP `i`를 구분하도록 보강했습니다.
-- Cisco `show ip bgp`의 `Metric`, `LocPrf`, `Weight`, `Path` 제목과 값을 색상 강조하도록 보강했습니다.
-- Cisco `show ip bgp summary`의 local AS 및 `V`/`AS`/`State` 항목을 색상 강조하도록 보강했습니다.
-- Cisco `show ip bgp neighbor(s)`의 remote AS와 `Last read`/`last write`, hold time, keepalive, seconds 항목을 색상 강조하도록 보강했습니다.
-- Cisco `show ip route`의 BGP `B` 코드를 파란색에서 고대비 주황색으로 변경했습니다.
+- Added distinct colors for Cisco `show ip bgp` status markers `*`, `>`, and `r`, separated route-line iBGP `i` from Origin `i`, removed the incorrect color from the `i - internal` legend, and anchored RIB-failure `r` matching to avoid ordinary `r` false positives. / Cisco `show ip bgp`의 `*`, `>`, `r` 상태 코드를 서로 다른 색으로 구분하고, 경로 행의 iBGP `i`와 Origin `i`를 분리했으며, 잘못된 `i - internal` 범례 색상을 제거하고, 일반 `r` 오탐을 막도록 RIB-failure `r` 매칭을 앵커링했습니다.
+- Highlighted `Metric`, `LocPrf`, `Weight`, and `Path` headings and values, local router ID, local AS, summary `V`/`AS`/`State` headings and values, and summary `Idle`/`Idle (Admin)` states. / `Metric`, `LocPrf`, `Weight`, `Path` 제목과 값, local router ID, local AS, summary의 `V`/`AS`/`State` 제목과 값, `Idle`/`Idle (Admin)` 상태를 색상 강조했습니다.
+- Highlighted BGP neighbor remote AS, `Last read`, `last write`, hold-time, keepalive, seconds, `state = ...`, and `NEXT_HOP is always this router for eBGP paths` output. / BGP neighbor의 remote AS, `Last read`, `last write`, hold time, keepalive, seconds, `state = ...`, `NEXT_HOP is always this router for eBGP paths` 출력을 색상 강조했습니다.
+- Changed the Cisco `show ip route` BGP `B` code from low-contrast blue to high-contrast orange. / Cisco `show ip route`의 BGP `B` 코드를 가독성이 낮은 파란색에서 고대비 주황색으로 변경했습니다.
+- Made the launcher overwrite existing files under `%TEMP%\Install-KeywordHighlight-Setup` and hardened keyword validation against internal blank lines while preserving the selected list and `Default.ini` behavior. / 런처가 `%TEMP%\Install-KeywordHighlight-Setup` 아래 기존 파일을 덮어쓰도록 하고, 선택 목록과 `Default.ini` 동작을 유지하면서 내부 빈 줄 검증을 강화했습니다.
 
 ## [0.1.4] - 2026-08-22
 

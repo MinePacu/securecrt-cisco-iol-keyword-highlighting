@@ -43,6 +43,24 @@ $functionStart = $source.IndexOf('function Invoke-SelfUpdate {', [System.StringC
 Assert-True -Condition ($functionStart -ge 0) -Message 'Invoke-SelfUpdate function must exist'
 $functionText = $source.Substring($functionStart)
 
+$releaseFunctionStart = $source.IndexOf('function Get-HighestGitHubRelease {', [System.StringComparison]::Ordinal)
+$rollbackFunctionStart = $source.IndexOf('function Get-RollbackAsset {', $releaseFunctionStart, [System.StringComparison]::Ordinal)
+Assert-True -Condition ($releaseFunctionStart -ge 0) -Message 'Get-HighestGitHubRelease function must exist'
+Assert-True -Condition ($rollbackFunctionStart -gt $releaseFunctionStart) -Message 'Get-HighestGitHubRelease function boundary must be discoverable'
+$releaseFunctionText = $source.Substring($releaseFunctionStart, $rollbackFunctionStart - $releaseFunctionStart)
+
+Assert-True -Condition ($releaseFunctionText.Contains('$pageSize = 100')) -Message 'release lookup must request 100 releases per page'
+Assert-True -Condition ($releaseFunctionText.Contains('$pageNumber = 1')) -Message 'release lookup must start at page 1'
+Assert-True -Condition ($releaseFunctionText.Contains('$pageUri = ''{0}&page={1}'' -f $releasesUri, $pageNumber')) -Message 'release lookup must request each paginated page'
+Assert-True -Condition ($releaseFunctionText.Contains('-Headers $headers -TimeoutSec 15')) -Message 'paginated release lookup must retain request headers and timeout'
+Assert-True -Condition ($releaseFunctionText.Contains('$pageReleases.Count -eq 0')) -Message 'release lookup must stop on an empty page'
+Assert-True -Condition ($releaseFunctionText.Contains('$pageReleases.Count -lt $pageSize')) -Message 'release lookup must stop on a short page'
+Assert-True -Condition ($releaseFunctionText.Contains('$pageNumber++')) -Message 'release lookup must advance to the next page'
+Assert-True -Condition ($releaseFunctionText.Contains('$releases += $pageReleases')) -Message 'release lookup must accumulate releases across pages'
+Assert-True -Condition ($releaseFunctionText.Contains('ConvertTo-SemVer -Version $tagName')) -Message 'release lookup must retain tag Semantic Version validation'
+Assert-True -Condition ($releaseFunctionText.Contains('$release.prerelease -or @($releaseVersion.PreRelease).Count -gt 0')) -Message 'stable release lookup must exclude GitHub and SemVer prereleases by default'
+Assert-True -Condition ($releaseFunctionText.Contains('if ($null -eq $release -or $release.draft)')) -Message 'release lookup must exclude draft releases'
+
 $requiredMessages = @(
     '[업데이트] 최신 버전을 확인하는 중입니다.',
     '[업데이트] 다운로드 중:',

@@ -83,10 +83,10 @@ SecureCRT 설정 폴더를 자동으로 찾지 못했습니다. 설정 폴더 �
 | `-WhatIf` | 실제 파일 변경 없이 예정된 작업만 출력합니다. 설치 확인 프롬프트는 건너뛰지만 경로·파일·접근 권한 검증은 필요합니다. |
 | `-Uninstall` | `-KeywordListVersion`으로 선택한 키워드 파일과 해당 버전의 백업만 복원·제거합니다. 다른 버전의 키워드 파일은 삭제하지 않습니다. `Default.ini` 백업도 버전별로 구분하며, 백업이 없을 때 현재 `Default.ini`를 임의로 삭제하거나 변경하지 않습니다. `-RollbackVersion`/`-Version`과 함께 사용할 수 없습니다. |
 | `-SkipUpdate` | GitHub 원격 버전 확인과 self-update를 건너뜁니다. 인터넷에 연결되지 않은 환경에서는 이 옵션을 사용하십시오. |
-| `-IncludePrerelease` | 자동 업데이트 확인에서 GitHub Releases의 draft가 아닌 stable/prerelease 중 가장 높은 유효한 Semantic Version을 선택합니다. 생략하면 prerelease를 제외하고 stable 릴리스만 사용합니다. |
+| `-IncludePrerelease` | prerelease 선택을 명시적으로 허용합니다. 생략하면 GitHub가 prerelease로 표시하지 않고 태그 SemVer에도 prerelease 식별자가 없는 published non-draft stable 릴리스 중 가장 높은 유효한 버전을 사용합니다. |
 | `-RollbackVersion <버전>` | `v0.1.0` 또는 `0.1.0`처럼 유효한 Semantic Version을 입력합니다. 별칭은 `-Version`입니다. 선택한 버전의 Git 태그 자산과 `CHANGELOG.md`를 검증한 뒤 설치합니다. 요청한 V3 파일이 태그에 없으면 V2로 대체하지 않고 오류로 중단합니다. |
 
-일반 설치/제거는 공개 저장소 `MinePacu/securecrt-cisco-iol-keyword-highlighting`의 GitHub Releases에서 draft가 아닌 stable 릴리스 중 가장 높은 유효한 SemVer의 태그를 확인합니다. `-IncludePrerelease`를 지정하면 prerelease 릴리스도 선택 대상에 포함합니다. 생략하면 prerelease를 제외합니다. 원격 버전이 더 높으면 선택한 태그에서 설치 스크립트, V2/V3 키워드 파일, `CHANGELOG.md`를 가져와 검증하고 self-update한 뒤 선택한 `-KeywordListVersion`을 보존하여 다시 실행합니다. V3 자산이 없거나 원격 검증에 실패하면 경고를 표시하고 기존 로컬 설치를 계속합니다. 오프라인이거나 원격 확인을 원하지 않으면 `-SkipUpdate`를 지정하십시오. `-RollbackVersion`을 지정한 경우에는 일반 최신 버전 확인 대신 지정한 Git 태그의 선택된 버전을 검증합니다.
+일반 설치/제거는 공개 저장소 `MinePacu/securecrt-cisco-iol-keyword-highlighting`의 GitHub Releases에서 가장 높은 유효한 published non-draft stable 릴리스의 태그를 확인합니다. 기본 self-update는 GitHub가 prerelease로 표시하지 않고 태그 SemVer에도 prerelease 식별자가 없는 릴리스만 선택합니다. `-IncludePrerelease`를 지정한 경우에만 비-draft prerelease 릴리스도 선택 대상에 포함합니다. 원격 버전이 더 높으면 선택한 태그에서 설치 스크립트, V2/V3 키워드 파일, `CHANGELOG.md`를 가져와 검증하고 self-update한 뒤 선택한 `-KeywordListVersion`을 보존하여 다시 실행합니다. V3 자산이 없거나 원격 검증에 실패하면 경고를 표시하고 기존 로컬 설치를 계속합니다. 오프라인이거나 원격 확인을 원하지 않으면 `-SkipUpdate`를 지정하십시오. `-RollbackVersion`을 지정한 경우에는 일반 최신 버전 확인 대신 지정한 Git 태그의 선택된 버전을 검증합니다.
 
 ### 설치, 변경 계획, 제거 명령
 
@@ -108,7 +108,7 @@ powershell -ExecutionPolicy Bypass -File .\Install-KeywordHighlight.ps1 -ConfigP
 powershell -ExecutionPolicy Bypass -File .\Install-KeywordHighlight.ps1
 ```
 
-자동 업데이트 확인에 GitHub prerelease도 포함하려면 명시적으로 선택합니다. 생략하면 기존처럼 `main` 브랜치만 확인합니다.
+자동 업데이트 확인에 GitHub prerelease도 포함하려면 명시적으로 선택합니다. 생략하면 가장 높은 유효한 published non-draft stable GitHub Release만 확인합니다.
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\Install-KeywordHighlight.ps1 -ConfigPath 'C:\Path\To\Config' -IncludePrerelease
@@ -248,4 +248,4 @@ INI의 색상값은 일반적인 SecureCRT/Windows `COLORREF` 저장 방식인 `
 
 변경 중인 항목은 `CHANGELOG.md`의 `Unreleased`에 기록하고, 릴리스할 때 해당 내용을 새 버전 번호와 날짜로 확정합니다. 릴리스마다 전용 커밋을 만들고 `vX.Y.Z` 형식의 Git 태그를 함께 생성하는 것을 권장합니다.
 
-기본 자동 업데이트는 공개 저장소의 GitHub Releases에서 draft가 아닌 stable 릴리스 중 가장 높은 유효한 SemVer 릴리스를 선택합니다. `-IncludePrerelease`를 지정하면 prerelease도 선택 대상에 포함하며, 스위치를 생략하면 prerelease를 제외합니다. 따라서 기본 동작을 사용할 때는 릴리스 커밋과 GitHub Release를 먼저 갱신해야 사용자 스크립트가 새 버전을 감지합니다.
+기본 자동 업데이트는 공개 저장소의 GitHub Releases에서 GitHub가 prerelease로 표시하지 않고 태그 SemVer에도 prerelease 식별자가 없는 published non-draft stable 릴리스 중 가장 높은 유효한 버전을 선택합니다. `-IncludePrerelease`는 prerelease 선택을 위한 명시적 opt-in이며, 지정한 경우에만 비-draft prerelease도 선택 대상에 포함합니다. 따라서 기본 동작을 사용할 때는 릴리스 커밋과 GitHub Release를 먼저 갱신해야 사용자 스크립트가 새 버전을 감지합니다.
