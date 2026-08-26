@@ -34,8 +34,7 @@
 
 .PARAMETER KeywordListVersion
     설치하거나 제거할 키워드 목록 버전입니다. V2 또는 V3를 지정할 수 있습니다.
-    생략하면 대화형 실행에서 V2/V3를 묻고, 빈 입력은 V3를 선택합니다. -Force를
-    사용한 실행에서 생략해도 V3를 선택합니다.
+    생략하면 V3를 자동 선택하며 V2/V3 선택 프롬프트를 표시하지 않습니다.
 
 .PARAMETER Uninstall
     설치된 키워드 ini를 제거하고, 존재할 경우 키워드 ini와 Default.ini의
@@ -158,24 +157,8 @@ function Resolve-KeywordListVersion {
         return $KeywordListVersion.ToUpperInvariant()
     }
 
-    if ($NonInteractive) {
-        Write-Host '[정보] -KeywordListVersion이 생략되어 V3를 선택했습니다.'
-        return 'V3'
-    }
-
-    while ($true) {
-        $answer = Read-Host '설치할 키워드 목록 버전을 선택하십시오 (V2/V3, Enter=V3)'
-        if ([string]::IsNullOrWhiteSpace($answer)) {
-            return 'V3'
-        }
-
-        $normalizedAnswer = $answer.Trim().ToUpperInvariant()
-        if ($normalizedAnswer -eq 'V2' -or $normalizedAnswer -eq 'V3') {
-            return $normalizedAnswer
-        }
-
-        Write-Warning '잘못된 키워드 목록 버전입니다. V2 또는 V3를 입력하거나 Enter로 V3를 선택하십시오.'
-    }
+    Write-Host '[정보] -KeywordListVersion이 생략되어 V3를 자동 선택했습니다.'
+    return 'V3'
 }
 
 function Test-KeywordIniContent {
@@ -191,6 +174,14 @@ function Test-KeywordIniContent {
     }
 
     $lines = $Content -split '\r?\n'
+    for ($lineIndex = 0; $lineIndex -lt $lines.Count; $lineIndex++) {
+        $isFinalSplitArtifact = $lineIndex -eq ($lines.Count - 1) -and
+            [string]::IsNullOrEmpty($lines[$lineIndex])
+        if (-not $isFinalSplitArtifact -and [string]::IsNullOrWhiteSpace($lines[$lineIndex])) {
+            throw "$Version 키워드 목록에 내부 빈 줄이 있습니다 (line $($lineIndex + 1)). 구분용 빈 줄을 제거하십시오."
+        }
+    }
+
     $rulePattern = if ($Version -eq 'V3') {
         '^\s+"[^"]*",[^,]+,[^,]+,00000001\s*$'
     }

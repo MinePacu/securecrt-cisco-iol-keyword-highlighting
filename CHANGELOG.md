@@ -4,6 +4,16 @@
 
 ## [Unreleased]
 
+## [0.1.5-alpha.10] - 2026-08-26
+
+### Changed
+
+- Omitted `-KeywordListVersion` now automatically selects V3 without showing a V2/V3 prompt; explicit V2/V3 selection remains supported. / `-KeywordListVersion`을 생략하면 V2/V3 선택 프롬프트 없이 V3를 자동 선택하며, V2/V3 명시 선택은 계속 지원합니다.
+
+### Fixed
+
+- Removed internal blank separator lines from the V2/V3 keyword INI files and added validation to reject them. / V2/V3 키워드 INI 파일의 내부 빈 구분 줄을 제거하고 이를 거부하는 검증을 추가했습니다.
+
 ## [0.1.5-alpha.9] - 2026-08-26
 
 ### Fixed
