@@ -34,8 +34,8 @@
 
 .PARAMETER KeywordListVersion
     설치하거나 제거할 키워드 목록 버전입니다. V2 또는 V3를 지정할 수 있습니다.
-    생략하면 대화형 실행에서 V2/V3를 묻고, 빈 입력은 V2를 선택합니다. -Force를
-    사용한 실행에서 생략하면 기존 동작과 같이 V2를 선택합니다.
+    생략하면 대화형 실행에서 V2/V3를 묻고, 빈 입력은 V3를 선택합니다. -Force를
+    사용한 실행에서 생략해도 V3를 선택합니다.
 
 .PARAMETER Uninstall
     설치된 키워드 ini를 제거하고, 존재할 경우 키워드 ini와 Default.ini의
@@ -159,14 +159,14 @@ function Resolve-KeywordListVersion {
     }
 
     if ($NonInteractive) {
-        Write-Host '[정보] -KeywordListVersion이 생략되어 V2를 선택했습니다.'
-        return 'V2'
+        Write-Host '[정보] -KeywordListVersion이 생략되어 V3를 선택했습니다.'
+        return 'V3'
     }
 
     while ($true) {
-        $answer = Read-Host '설치할 키워드 목록 버전을 선택하십시오 (V2/V3, Enter=V2)'
+        $answer = Read-Host '설치할 키워드 목록 버전을 선택하십시오 (V2/V3, Enter=V3)'
         if ([string]::IsNullOrWhiteSpace($answer)) {
-            return 'V2'
+            return 'V3'
         }
 
         $normalizedAnswer = $answer.Trim().ToUpperInvariant()
@@ -174,7 +174,7 @@ function Resolve-KeywordListVersion {
             return $normalizedAnswer
         }
 
-        Write-Warning '잘못된 키워드 목록 버전입니다. V2 또는 V3를 입력하거나 Enter로 V2를 선택하십시오.'
+        Write-Warning '잘못된 키워드 목록 버전입니다. V2 또는 V3를 입력하거나 Enter로 V3를 선택하십시오.'
     }
 }
 

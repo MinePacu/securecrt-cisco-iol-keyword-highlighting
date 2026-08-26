@@ -68,8 +68,10 @@ for ($index = 0; $index -lt $v2Rows.Count; $index++) {
 $installerText = [System.IO.File]::ReadAllText($installerPath)
 Assert-True -Condition $installerText.Contains("[ValidateSet('V2', 'V3')]") -Message 'installer must expose a V2/V3 ValidateSet parameter'
 Assert-True -Condition $installerText.Contains('[string]$KeywordListVersion') -Message 'installer must define -KeywordListVersion'
-Assert-True -Condition $installerText.Contains("Read-Host '설치할 키워드 목록 버전을 선택하십시오 (V2/V3, Enter=V2)'") -Message 'interactive installation must visibly offer V2 and V3'
-Assert-True -Condition $installerText.Contains("return 'V2'") -Message 'blank or non-interactive selection must default to V2'
+Assert-True -Condition $installerText.Contains("Read-Host '설치할 키워드 목록 버전을 선택하십시오 (V2/V3, Enter=V3)'") -Message 'interactive installation must visibly offer V2 and V3 with V3 as the default'
+Assert-True -Condition ([regex]::IsMatch($installerText, "Write-Host '\[정보\] -KeywordListVersion이 생략되어 V3를 선택했습니다\.'\r?\n\s+return 'V3'")) -Message 'non-interactive omitted selection must log and default to V3'
+Assert-True -Condition ([regex]::IsMatch($installerText, "if \(\[string\]::IsNullOrWhiteSpace\(`$answer\)\) \{\r?\n\s+return 'V3'")) -Message 'blank interactive selection must default to V3'
+Assert-True -Condition $installerText.Contains('return $KeywordListVersion.ToUpperInvariant()') -Message 'explicit V2 or V3 selection must be preserved'
 Assert-True -Condition $installerText.Contains("Write-Warning '잘못된 키워드 목록 버전입니다.") -Message 'invalid interactive selections must be rejected clearly'
 Assert-True -Condition $installerText.Contains('$null = $arguments.Add(''-KeywordListVersion'')') -Message 'self-update restart must propagate the selected version parameter'
 Assert-True -Condition $installerText.Contains('$script:UpdateFileNames = @(') -and $installerText.Contains("'PNET-Cisco-Dark-V3.ini'") -Message 'self-update file list must include the V3 asset'

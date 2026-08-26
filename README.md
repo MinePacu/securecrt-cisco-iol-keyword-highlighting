@@ -59,13 +59,13 @@ SecureCRT 설정 폴더를 자동으로 찾지 못했습니다. 설정 폴더 �
 
 ## Windows 자동 설치 스크립트
 
-`Install-KeywordHighlight.ps1`은 SecureCRT 설정 폴더를 확인한 뒤 선택한 키워드 목록을 `Keywords`에 설치하고, `Sessions\Default.ini`에 기본 세션 하이라이트 옵션을 적용하는 Windows용 PowerShell 스크립트입니다. 실행할 때 V2 또는 V3를 선택할 수 있으며, Enter는 V2를 뜻합니다. V2는 `PNET-Cisco-Dark.ini`/`PNET-Cisco-Dark`, V3는 `PNET-Cisco-Dark-V3.ini`/`PNET-Cisco-Dark-V3`를 사용하므로 두 파일을 함께 보관할 수 있습니다.
+`Install-KeywordHighlight.ps1`은 SecureCRT 설정 폴더를 확인한 뒤 선택한 키워드 목록을 `Keywords`에 설치하고, `Sessions\Default.ini`에 기본 세션 하이라이트 옵션을 적용하는 Windows용 PowerShell 스크립트입니다. 실행할 때 V2 또는 V3를 선택할 수 있으며, Enter는 V3를 뜻합니다. V2는 `PNET-Cisco-Dark.ini`/`PNET-Cisco-Dark`, V3는 `PNET-Cisco-Dark-V3.ini`/`PNET-Cisco-Dark-V3`를 사용하므로 두 파일을 함께 보관할 수 있습니다.
 
 ### 입력과 선택지
 
 | 상황 | 스크립트가 묻는 내용 | 입력 방법과 결과 |
 |---|---|---|
-| 키워드 목록 버전 선택 | `설치할 키워드 목록 버전을 선택하십시오 (V2/V3, Enter=V2)` | `V2` 또는 `V3`를 입력합니다. 빈 입력은 V2이며, 잘못된 입력은 다시 묻습니다. `-Force`에서 생략하면 V2입니다. |
+| 키워드 목록 버전 선택 | `설치할 키워드 목록 버전을 선택하십시오 (V2/V3, Enter=V3)` | `V2` 또는 `V3`를 입력합니다. 빈 입력은 V3이며, 잘못된 입력은 다시 묻습니다. `-Force`에서 생략하면 V3입니다. |
 | 자동 탐색 실패(`-Force` 없음) | `SecureCRT 설정 폴더를 자동으로 찾지 못했습니다. 설정 폴더 경로를 직접 입력하십시오` | `Sessions\Default.ini`가 있는 전체 설정 폴더 경로를 입력하고 Enter를 누릅니다. 잘못된 경로면 종료합니다. |
 | SecureCRT 실행 중(`-Force` 없음) | `계속하시겠습니까? (Y/N)` | `Y` 또는 `y`만 계속입니다. 그 밖의 모든 입력은 취소이며 변경하지 않습니다. 종료 후 실행하는 것을 권장합니다. |
 | 선택한 키워드 파일 존재(`-Force`/`-WhatIf` 없음) | `기존 <선택한 파일>가 존재합니다. 백업 후 덮어쓰시겠습니까? (Y/N)` | `Y` 또는 `y`만 백업 후 덮어쓰기를 승인합니다. 그 밖의 입력은 취소이며 변경하지 않습니다. |
@@ -79,7 +79,7 @@ SecureCRT 설정 폴더를 자동으로 찾지 못했습니다. 설정 폴더 �
 |---|---|
 | `-ConfigPath <경로>` | `Sessions\Default.ini`가 들어 있는 SecureCRT 설정 폴더 자체를 입력합니다. `Keywords` 폴더나 `Default.ini` 파일을 지정하지 마십시오. 존재하지 않는 경로면 오류로 종료합니다. 생략 시 위의 후보 경로를 순서대로 자동 탐색합니다. |
 | `-Force` | SecureCRT 실행 확인과 기존 키워드 파일/`Default.ini`의 백업 후 적용 확인을 건너뜁니다. 자동 탐색 실패를 해결하는 옵션은 아니므로, 자동 탐색이 실패할 때는 `-ConfigPath`를 명시해야 합니다. 실행 중인 SecureCRT가 설정 파일을 다시 저장해 변경 내용을 덮어쓸 수 있으므로 종료 후 실행하는 것이 좋습니다. |
-| `-KeywordListVersion V2|V3` | 설치·제거 대상을 명시적으로 선택합니다. 생략 시 대화형 실행은 V2/V3 선택을 표시하고, Enter는 V2입니다. `-Force`에서 생략하면 V2입니다. |
+| `-KeywordListVersion V2|V3` | 설치·제거 대상을 명시적으로 선택합니다. 생략 시 대화형 실행은 V2/V3 선택을 표시하고, Enter는 V3입니다. `-Force`에서 생략하면 V3입니다. 명시적으로 V2를 지정하면 V2를 선택합니다. |
 | `-WhatIf` | 실제 파일 변경 없이 예정된 작업만 출력합니다. 설치 확인 프롬프트는 건너뛰지만 경로·파일·접근 권한 검증은 필요합니다. |
 | `-Uninstall` | `-KeywordListVersion`으로 선택한 키워드 파일과 해당 버전의 백업만 복원·제거합니다. 다른 버전의 키워드 파일은 삭제하지 않습니다. `Default.ini` 백업도 버전별로 구분하며, 백업이 없을 때 현재 `Default.ini`를 임의로 삭제하거나 변경하지 않습니다. `-RollbackVersion`/`-Version`과 함께 사용할 수 없습니다. |
 | `-SkipUpdate` | GitHub 원격 버전 확인과 self-update를 건너뜁니다. 인터넷에 연결되지 않은 환경에서는 이 옵션을 사용하십시오. |
@@ -96,10 +96,10 @@ SecureCRT 설정 폴더를 자동으로 찾지 못했습니다. 설정 폴더 �
 powershell -ExecutionPolicy Bypass -File .\Install-KeywordHighlight.ps1 -ConfigPath 'C:\Path\To\Config'
 ```
 
-V3 목록을 설치하려면 명시적으로 선택합니다.
+V2 목록을 설치하려면 명시적으로 선택합니다.
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\Install-KeywordHighlight.ps1 -ConfigPath 'C:\Path\To\Config' -KeywordListVersion V3
+powershell -ExecutionPolicy Bypass -File .\Install-KeywordHighlight.ps1 -ConfigPath 'C:\Path\To\Config' -KeywordListVersion V2
 ```
 
 경로 자동 탐색을 사용하려면 `-ConfigPath`를 생략합니다.

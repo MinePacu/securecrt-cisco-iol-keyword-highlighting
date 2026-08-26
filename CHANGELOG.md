@@ -4,6 +4,12 @@
 
 ## [Unreleased]
 
+## [0.1.5-alpha.8] - 2026-08-26
+
+### Changed
+
+- Changed the omitted, blank-input, and `-Force` keyword-list default from V2 to V3; explicit `-KeywordListVersion V2` remains supported. / 키워드 목록 버전을 생략하거나 빈 입력 또는 `-Force`로 실행할 때의 기본값을 V2에서 V3로 변경했으며, 명시적인 `-KeywordListVersion V2`는 계속 지원합니다.
+
 ## [0.1.5-alpha.7] - 2026-08-26
 
 ### Fixed
