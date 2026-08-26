@@ -4,6 +4,12 @@
 
 ## [Unreleased]
 
+## [0.1.5-alpha.7] - 2026-08-26
+
+### Fixed
+
+- Separated Cisco BGP route status markers and refined BGP header/value highlighting for tested IOS/IOL output in the V2 and V3 keyword lists.
+
 ## [0.1.5-alpha.6] - 2026-08-25
 
 ### Fixed
