@@ -4,6 +4,16 @@
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-08-26
+
+### Added
+
+- Organized the installation-guide screenshots in `images/`. / 설치 가이드 스크린샷을 `images/` 아래에 정리했습니다.
+
+### Fixed
+
+- Fixed the Windows PowerShell 5.1 self-update handling of nested arrays returned by GitHub Releases and added local regression coverage. / Windows PowerShell 5.1 self-update가 GitHub Releases에서 반환되는 중첩 배열을 처리하도록 수정하고 로컬 회귀 검증을 추가했습니다.
+
 ## [0.1.6] - 2026-08-26
 
 ### Fixed

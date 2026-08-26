@@ -32,11 +32,11 @@ $scriptPath = [System.IO.Path]::GetFullPath((Join-Path (Join-Path $PSScriptRoot 
 $source = [System.IO.File]::ReadAllText($scriptPath)
 $tokens = $null
 $parseErrors = $null
-[System.Management.Automation.Language.Parser]::ParseFile(
+$scriptAst = [System.Management.Automation.Language.Parser]::ParseFile(
     $scriptPath,
     [ref]$tokens,
     [ref]$parseErrors
-) | Out-Null
+)
 Assert-Equal -Actual $parseErrors.Count -Expected 0 -Message 'installer script must parse without errors'
 
 $functionStart = $source.IndexOf('function Invoke-SelfUpdate {', [System.StringComparison]::Ordinal)
@@ -109,4 +109,55 @@ Assert-True -Condition ($functionText.Contains("[Environment]::SetEnvironmentVar
 Assert-True -Condition ($functionText.Contains('finally {')) -Message 'self-update must retain cleanup/finally handling'
 Assert-True -Condition ($functionText.Contains("Write-Warning $updateErrorMessage")) -Message 'self-update must retain the existing error fallback'
 
-Write-Host '[PASS] self-update progress, restart confirmation, ordering, and fallback are statically verified'
+# Dot-source only the release-selection functions under test. This keeps the
+# regression test local and avoids executing the installer or making a network call.
+foreach ($functionName in @(
+        'ConvertTo-SemVer',
+        'Compare-SemVerNumericIdentifier',
+        'Compare-SemVer',
+        'Get-HighestGitHubRelease'
+    )) {
+    $functionAsts = @($scriptAst.Find({
+            param($node)
+            $node -is [System.Management.Automation.Language.FunctionDefinitionAst] -and
+                $node.Name -eq $functionName
+        }, $true))
+    Assert-Equal -Actual $functionAsts.Count -Expected 1 -Message "$functionName function must exist for executable release-selection testing"
+    . ([scriptblock]::Create($functionAsts[0].Extent.Text))
+}
+
+$mockReleaseResponse = [object[]]@(
+    [PSCustomObject]@{ tag_name = 'v0.1.4'; draft = $false; prerelease = $false },
+    [PSCustomObject]@{ tag_name = 'v0.1.6'; draft = $false; prerelease = $false },
+    [PSCustomObject]@{ tag_name = 'v0.1.7-beta.1'; draft = $false; prerelease = $false },
+    [PSCustomObject]@{ tag_name = 'v0.1.8'; draft = $true; prerelease = $false }
+)
+$nestedMockResponse = @(Write-Output -NoEnumerate $mockReleaseResponse)
+Assert-Equal -Actual $nestedMockResponse.Count -Expected 1 -Message 'mock must reproduce a single nested release-array response item'
+Assert-True -Condition ($nestedMockResponse[0] -is [System.Array]) -Message 'mock response item must be the release array'
+$script:InstallerUpdateMockReleaseResponse = $nestedMockResponse[0]
+$script:InstallerUpdateMockRequestCount = 0
+function Invoke-RestMethod {
+    param(
+        [Parameter(Mandatory = $true)][string]$Uri,
+        [Parameter()][string]$Method,
+        [Parameter()][hashtable]$Headers,
+        [Parameter()][int]$TimeoutSec
+    )
+
+    [void]($script:InstallerUpdateMockRequestCount++)
+    Write-Output -NoEnumerate $script:InstallerUpdateMockReleaseResponse
+}
+
+try {
+    $selectedRelease = Get-HighestGitHubRelease
+    Assert-Equal -Actual $selectedRelease.TagName -Expected 'v0.1.6' -Message 'nested release-array response must select the highest stable release'
+    Assert-Equal -Actual $script:InstallerUpdateMockRequestCount -Expected 1 -Message 'short mocked release page must stop after one request'
+}
+finally {
+    Remove-Item -LiteralPath Function:\Invoke-RestMethod -ErrorAction SilentlyContinue
+    Remove-Variable -Name InstallerUpdateMockReleaseResponse -Scope Script -ErrorAction SilentlyContinue
+    Remove-Variable -Name InstallerUpdateMockRequestCount -Scope Script -ErrorAction SilentlyContinue
+}
+
+Write-Host '[PASS] self-update progress, restart confirmation, ordering, fallback, and nested release-array regression are verified'

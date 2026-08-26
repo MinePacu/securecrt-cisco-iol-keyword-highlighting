@@ -403,7 +403,25 @@ function Get-HighestGitHubRelease {
     $releases = @()
     while ($true) {
         $pageUri = '{0}&page={1}' -f $releasesUri, $pageNumber
-        $pageReleases = @(Invoke-RestMethod -Uri $pageUri -Method Get -Headers $headers -TimeoutSec 15)
+        $rawPageReleases = Invoke-RestMethod -Uri $pageUri -Method Get -Headers $headers -TimeoutSec 15
+        if ($null -eq $rawPageReleases) {
+            $pageReleases = @()
+        }
+        elseif ($rawPageReleases -is [System.Array] -and $rawPageReleases.Count -eq 0) {
+            $pageReleases = @()
+        }
+        elseif ($rawPageReleases -is [System.Array] -and
+            $rawPageReleases.Count -eq 1 -and
+            $rawPageReleases[0] -is [System.Array]) {
+            $pageReleases = @(
+                foreach ($release in $rawPageReleases[0]) {
+                    $release
+                }
+            )
+        }
+        else {
+            $pageReleases = @($rawPageReleases)
+        }
         if ($pageReleases.Count -eq 0) {
             break
         }
