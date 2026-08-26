@@ -4,6 +4,16 @@
 
 ## [Unreleased]
 
+## [0.1.5-alpha.12] - 2026-08-26
+
+### Added
+
+- Added regression coverage for standalone `Idle` and `Idle (Admin)` highlighting in `show ip bgp summary`. / `show ip bgp summary`에서 standalone `Idle` 및 `Idle (Admin)` 하이라이팅에 대한 회귀 검증을 추가했습니다.
+
+### Fixed
+
+- Highlighted standalone `Idle` in `show ip bgp summary` alongside the existing `Idle (Admin)` screenshot-style state matching. / 기존 `Idle (Admin)` 스크린샷형 상태 매칭과 함께 `show ip bgp summary`의 standalone `Idle`도 강조되도록 수정했습니다.
+
 ## [0.1.5-alpha.11] - 2026-08-26
 
 ### Added

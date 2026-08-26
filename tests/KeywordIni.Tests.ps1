@@ -1273,7 +1273,7 @@ $bgpSummaryRuleSpecs = @(
     @{ Pattern = '\bAS(?=\x20+MsgRcvd\b)'; Color = '00FACE87' },
     @{ Pattern = 'MsgRcvd\x20+MsgSent\x20+TblVer\x20+InQ\x20+OutQ\x20+Up/Down\x20+State(?=\x2fPfxRcd\b|\x20*$)'; Color = '00FACE87' },
     @{ Pattern = '^\x20*/PfxRcd\x20*$'; Color = '00FACE87' },
-    @{ Pattern = '^\x20*\*?(?:[0-9]{1,3}\.){3}[0-9]{1,3}\x20+[0-9]+\x20+(?:[0-9]{1,5}\.[0-9]{1,5}|[0-9]{1,10})\x20+[0-9]+\x20+[0-9]+\x20+[0-9]+\x20+[0-9]+(?:\x20+[0-9]+)?\x20+(?:[0-9]{2}:[0-9]{2}:[0-9]{2}|never)\x20+(?:[0-9]+|Idle(?:\x20+\(Admin\))?|Active|Connect|OpenSent|OpenConfirm|Established|PfxRcd)\x20*$'; Color = '0000D7FF' }
+    @{ Pattern = 'Idle(?=\x20+\(Admin\)\x20*$|\x20*$)|\(Admin\)(?=\x20*$)|^\x20*\*?(?:[0-9]{1,3}\.){3}[0-9]{1,3}\x20+[0-9]+\x20+(?:[0-9]{1,5}\.[0-9]{1,5}|[0-9]{1,10})\x20+[0-9]+\x20+[0-9]+\x20+[0-9]+\x20+[0-9]+(?:\x20+[0-9]+)?\x20+(?:[0-9]{2}:[0-9]{2}:[0-9]{2}|never)\x20+(?:[0-9]+|Idle(?:\x20+\(Admin\))?|Active|Connect|OpenSent|OpenConfirm|Established|PfxRcd)\x20*$'; Color = '0000D7FF' }
 )
 Assert-True -Condition (-not $bgpSummarySectionText.Contains('\s')) -Message 'BGP summary rules must use SecureCRT literal-space syntax instead of \s'
 Assert-True -Condition (-not $bgpSummarySectionText.Contains('(?<=')) -Message 'BGP summary rules must not depend on lookbehind'
@@ -1357,7 +1357,10 @@ $bgpSummaryScreenshotTranscript = @(
     'BGP table version is 7, main routing table version 7',
     'Neighbor        V          AS MsgRcvd MsgSent   TblVer  InQ OutQ Up/Down  State/PfxRcd',
     '2.2.2.2         4          2  28      30       7       0    0    00:24:19 1',
+    '2.2.2.2         4          2  0 0 1 0 0 00:01:39 Idle (Admin)',
+    '2.2.2.2         4          2  0 0 1 0 0 00:01:39 Idle',
     '5.5.5.5         4          2  28      30       7       0    0    00:22:57 1',
+    '3.3.3.3         4          2  0 0 1 0 0 00:01:35 Idle (Admin)',
     '10.1.14.4       4          1  32      32       7       0    0    00:25:10 1',
     '10.1.23.3       4          2  21      19       7       0    0    00:08:21 2'
 ) -join [Environment]::NewLine
@@ -1373,7 +1376,10 @@ Assert-True -Condition ([System.Text.RegularExpressions.Regex]::IsMatch(
     )) -Message 'Summary AS title rule matches the screenshot header AS token'
 foreach ($neighborRow in @(
         '2.2.2.2         4          2  28      30       7       0    0    00:24:19 1',
+        '2.2.2.2         4          2  0 0 1 0 0 00:01:39 Idle (Admin)',
+        '2.2.2.2         4          2  0 0 1 0 0 00:01:39 Idle',
         '5.5.5.5         4          2  28      30       7       0    0    00:22:57 1',
+        '3.3.3.3         4          2  0 0 1 0 0 00:01:35 Idle (Admin)',
         '10.1.14.4       4          1  32      32       7       0    0    00:25:10 1',
         '10.1.23.3       4          2  21      19       7       0    0    00:08:21 2'
     )) {
@@ -1383,12 +1389,27 @@ foreach ($neighborRow in @(
             [System.Text.RegularExpressions.RegexOptions]::CultureInvariant
         )) -Message "Summary value rule matches screenshot neighbor row: $neighborRow"
 }
+$idleAdminTokenMatches = [System.Text.RegularExpressions.Regex]::Matches(
+    'Idle (Admin)',
+    $bgpSummaryRuleSpecs[7].Pattern,
+    [System.Text.RegularExpressions.RegexOptions]::CultureInvariant
+)
+Assert-True -Condition (($idleAdminTokenMatches | ForEach-Object { $_.Value }) -contains 'Idle') -Message 'Summary value rule explicitly matches the Idle token in Idle (Admin)'
+Assert-True -Condition (($idleAdminTokenMatches | ForEach-Object { $_.Value }) -contains '(Admin)') -Message 'Summary value rule explicitly matches the (Admin) token in Idle (Admin)'
+$idleTokenMatches = [System.Text.RegularExpressions.Regex]::Matches(
+    'Idle',
+    $bgpSummaryRuleSpecs[7].Pattern,
+    [System.Text.RegularExpressions.RegexOptions]::CultureInvariant
+)
+Assert-True -Condition (($idleTokenMatches | ForEach-Object { $_.Value }) -contains 'Idle') -Message 'Summary value rule explicitly matches a standalone Idle token'
 foreach ($falseSummarySample in @(
         'V AS MsgRcvd MsgSent',
         'not-a-neighbor V 50000 2 2 0 0 0 00:00:37 0',
         'BGP router identifier 192.168.3.1, local AS number not-an-asn',
         'not-a-neighbor 4 50000 2 2 0 0 0 00:00:37 0',
-        '192.168.3.2 4 50000 2 2 0 0 0 00:00:37 Unknown'
+        '192.168.3.2 4 50000 2 2 0 0 0 00:00:37 Unknown',
+        'This session is Idle now',
+        'Admin'
     )) {
     foreach ($summaryRule in $bgpSummaryRuleSpecs[0,3,4,5,6,7]) {
         Assert-True -Condition (-not [System.Text.RegularExpressions.Regex]::IsMatch(
