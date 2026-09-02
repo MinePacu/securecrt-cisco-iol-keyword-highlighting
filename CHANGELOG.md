@@ -4,6 +4,16 @@
 
 ## [Unreleased]
 
+## [1.0.1] - 2026-09-02
+
+### Added
+
+- Added Cisco `show ip interface` ACL-binding highlighting to the synchronized V2/V3 keyword lists, covering inbound/outgoing `access list is not set`, numeric and named ACL values, and the legacy `permit Any` form, with regression coverage for spacing and false positives. / 동기화된 V2/V3 키워드 목록에 Cisco `show ip interface` ACL 바인딩 하이라이트를 추가하여 inbound/outgoing `access list is not set`, 숫자형·이름형 ACL 값 및 구형 `permit Any` 형식을 지원하고, 공백 변형과 오탐 회귀 검증을 추가했습니다.
+
+### Changed
+
+- Refreshed the installation-guide screenshots by removing obsolete ZIP extraction image sections, renaming the added SecureCRT verification screenshot for the guide footer, and aligning the guide note with the remaining image sequence. / 설치 안내서에서 더 이상 필요하지 않은 ZIP 추출 이미지 섹션을 제거하고, 추가된 SecureCRT 검증 스크린샷의 안내서 푸터용 이름을 정리했으며, 남은 이미지 순서에 맞춰 안내 문구를 조정했습니다.
+
 ## [1.0.0] - 2026-08-26
 
 ### Added

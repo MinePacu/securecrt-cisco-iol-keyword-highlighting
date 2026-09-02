@@ -2000,3 +2000,77 @@ foreach ($falseNextHopSample in @(
         )) -Message "NEXT_HOP rule rejects incomplete or case-mismatched output: $falseNextHopSample"
 }
 Write-Host '[PASS] BGP neighbor remote-AS, read/write, hold-time, keepalive, state=value, and NEXT_HOP rules match IOS variants without malformed values'
+
+$interfaceAclSectionText = Get-IniSectionText -Lines $lines -SectionName 'IP_INTERFACE_ACL_BINDINGS'
+$interfaceAclV3SectionText = Get-IniSectionText -Lines $v3Lines -SectionName 'IP_INTERFACE_ACL_BINDINGS'
+$interfaceAclRuleSpecs = @(
+    @{ Name = 'IP interface ACL bindings header'; Pattern = '[*]IP_INTERFACE_ACL_BINDINGS'; Color = '00FFFFFF' },
+    @{ Name = 'ACL binding not-set state'; Pattern = '^\x20*(?:Inbound|Outgoing)\x20+access\x20+list\x20+is\x20+not\x20+set\x20*$'; Color = '00C0C0C0' },
+    @{ Name = 'ACL binding applied value'; Pattern = '^\x20*(?:Inbound|Outgoing)\x20+access\x20+list\x20+is\x20+(?:permit\x20+Any|[0-9]+|[A-Za-z0-9_.:/-]+)\x20*$'; Color = '00EE82EE' }
+)
+$interfaceAclV2Rows = @($interfaceAclSectionText -split [Environment]::NewLine | Where-Object { $_ -match '^\s+"' })
+$interfaceAclV3Rows = @($interfaceAclV3SectionText -split [Environment]::NewLine | Where-Object { $_ -match '^\s+"' })
+Assert-Equal -Actual $interfaceAclV2Rows.Count -Expected 3 -Message 'IP interface ACL bindings V2 section must contain exactly its header and two behavior rules'
+Assert-Equal -Actual $interfaceAclV3Rows.Count -Expected 3 -Message 'IP interface ACL bindings V3 section must contain exactly its header and two behavior rules'
+Assert-True -Condition (-not $interfaceAclSectionText.Contains('\s')) -Message 'IP interface ACL binding rules must use SecureCRT literal-space syntax instead of \s'
+Assert-True -Condition (-not $interfaceAclV3SectionText.Contains('\s')) -Message 'V3 IP interface ACL binding rules must use SecureCRT literal-space syntax instead of \s'
+foreach ($interfaceAclRule in $interfaceAclRuleSpecs) {
+    $escapedPattern = [System.Text.RegularExpressions.Regex]::Escape($interfaceAclRule.Pattern)
+    $v2RulePattern = '^\s*"' + $escapedPattern + '\",' + $interfaceAclRule.Color + ',00000001\s*$'
+    $v3RulePattern = '^\s*"' + $escapedPattern + '\",' + $interfaceAclRule.Color + ',00000001,00000001\s*$'
+    $v2RuleMatches = [System.Text.RegularExpressions.Regex]::Matches(
+        $interfaceAclSectionText,
+        $v2RulePattern,
+        [System.Text.RegularExpressions.RegexOptions]::Multiline -bor
+            [System.Text.RegularExpressions.RegexOptions]::CultureInvariant
+    )
+    $v3RuleMatches = [System.Text.RegularExpressions.Regex]::Matches(
+        $interfaceAclV3SectionText,
+        $v3RulePattern,
+        [System.Text.RegularExpressions.RegexOptions]::Multiline -bor
+            [System.Text.RegularExpressions.RegexOptions]::CultureInvariant
+    )
+    Assert-Equal -Actual $v2RuleMatches.Count -Expected 1 -Message "V2 $($interfaceAclRule.Name) has exact pattern and color"
+    Assert-Equal -Actual $v3RuleMatches.Count -Expected 1 -Message "V3 $($interfaceAclRule.Name) has exact pattern and color"
+}
+for ($interfaceAclRowIndex = 0; $interfaceAclRowIndex -lt $interfaceAclV2Rows.Count; $interfaceAclRowIndex++) {
+    Assert-Equal -Actual $interfaceAclV3Rows[$interfaceAclRowIndex] -Expected ($interfaceAclV2Rows[$interfaceAclRowIndex] + ',00000001') -Message "V3 IP interface ACL binding row $interfaceAclRowIndex must preserve the V2 row and append only its fourth field"
+}
+
+$interfaceAclNotSetPattern = $interfaceAclRuleSpecs[1].Pattern
+$interfaceAclAppliedPattern = $interfaceAclRuleSpecs[2].Pattern
+foreach ($sample in @(
+        'Inbound access list is not set',
+        'Outgoing  access list is not set',
+        '  Inbound    access list   is   not   set  '
+    )) {
+    Assert-True -Condition ([System.Text.RegularExpressions.Regex]::IsMatch(
+            $sample,
+            $interfaceAclNotSetPattern,
+            [System.Text.RegularExpressions.RegexOptions]::CultureInvariant
+        )) -Message "ACL not-set rule matches exact Cisco output with permitted spacing: $sample"
+}
+foreach ($sample in @(
+        'Inbound access list is 102',
+        'Outgoing access list is simple-ip_acl.name/zone:1',
+        'Outgoing  access list is permit   Any'
+    )) {
+    Assert-True -Condition ([System.Text.RegularExpressions.Regex]::IsMatch(
+            $sample,
+            $interfaceAclAppliedPattern,
+            [System.Text.RegularExpressions.RegexOptions]::CultureInvariant
+        )) -Message "ACL applied-value rule matches numeric, named, and legacy permit-Any output: $sample"
+}
+foreach ($sample in @(
+        'Inbound access-list is 102',
+        'This is unrelated text',
+        'Inbound access list is not set',
+        'Outgoing access list is simple ip'
+    )) {
+    Assert-True -Condition (-not [System.Text.RegularExpressions.Regex]::IsMatch(
+            $sample,
+            $interfaceAclAppliedPattern,
+            [System.Text.RegularExpressions.RegexOptions]::CultureInvariant
+        )) -Message "ACL applied-value rule rejects malformed or non-applied output: $sample"
+}
+Write-Host '[PASS] IP interface ACL bindings match inbound/outgoing not-set, numeric/named ACLs, and permit Any without false positives'
