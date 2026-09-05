@@ -5,7 +5,7 @@
 이 설정은 다음 특징을 가집니다.
 
 - 대소문자를 구분합니다. 파일의 `D:"Match Case"=00000001` 설정에 해당합니다.
-- SecureCRT의 `Keyword List V2`와 `Keyword List V3` 형식을 제공합니다. 두 목록은 같은 348개 규칙을 사용합니다.
+- SecureCRT의 `Keyword List V2`와 `Keyword List V3` 형식을 제공합니다. 두 목록은 같은 368개 규칙을 사용합니다.
 - `show ip bgp`, `show ip bgp summary`, `show ip bgp neighbors`의 전용 규칙이 generic 상태 규칙보다 먼저 적용되며, neighbor `state = ...` 출력도 강조합니다.
 - 정규식 패턴으로 상태 문자열, 숫자, IP 주소, 인터페이스 이름, 프롬프트 등을 하이라이트합니다.
 - 키워드 목록 자체에 설치 스크립트, 자동화 명령, 외부 의존성은 포함하지 않습니다.
@@ -148,7 +148,7 @@ powershell -ExecutionPolicy Bypass -File .\Install-KeywordHighlight.ps1 -ConfigP
 ## 제공 파일
 
 - `PNET-Cisco-Dark.ini`: SecureCRT용 키워드 하이라이트 목록
-- `PNET-Cisco-Dark-V3.ini`: 같은 348개 규칙을 SecureCRT `Keyword List V3` 형식으로 저장한 키워드 하이라이트 목록
+- `PNET-Cisco-Dark-V3.ini`: 같은 368개 규칙을 SecureCRT `Keyword List V3` 형식으로 저장한 키워드 하이라이트 목록
 - `README.md`: 설정 범위, 설치/제거 절차, 적용 시 주의사항 및 그룹/색상 설명
 - `Install-KeywordHighlight.ps1`: Windows용 자동 설치/제거 PowerShell 스크립트
 
@@ -192,6 +192,7 @@ INI의 색상값은 일반적인 SecureCRT/Windows `COLORREF` 저장 방식인 `
 
 | 그룹 | 강조 대상 |
 |---|---|
+| `SHOW_IP_NAT_TRANSLATIONS` | 기본 NAT 변환 테이블의 프로토콜, 네 주소 열과 포트·ICMP 식별자, `---` |
 | `CRITICAL_ERRORS_AND_DOWN_STATES` | `administratively down`, `err-disabled`, 불일치, 실패/오류, shutdown, down 등 장애·다운 상태 |
 | `GOOD_AND_INTERFACE_STATES` | up, connected, enabled, permit, success, passed 및 `down->up` 등 정상·회복 상태 |
 | `STP_RAPID_PVST_MST` | Root/Bridge ID, Root Port, 역할(Desg/Altn/Back), FWD/BLK, PVST/RSTP/MST, PortFast·Guard·inconsistent |
@@ -208,12 +209,25 @@ INI의 색상값은 일반적인 SecureCRT/Windows `COLORREF` 저장 방식인 `
 | `OSPF_VIRTUAL_LINKS` | `show ip ospf virtual-links`의 `OSPF_VL<n>` 식별자, `Transit area` 문구와 정수·IPv4 형식 transit area ID |
 | `VLAN_TRUNK_AND_LAYER2` | trunk/access, VLAN/Vl 번호, native VLAN, dot1q/802.1Q |
 | `INTERFACES_ADDRESSES_AND_IDENTIFIERS` | 장문·축약 인터페이스 이름, IPv4 주소/프리픽스, Cisco dotted MAC 및 콜론 형식 MAC |
+| `SHOW_ACCESS_LISTS` | `show access-list(s)`의 Standard/Extended/IPv4/IPv6 ACL 제목과 `permit`/`deny`/`remark` 항목 |
 | `ROUTING_TABLE_CODES_AND_METRICS` | `show ip route` 범례와 경로 행의 L/C/S·S*/R/I/M/B/D/EX/O, OSPF 세부 코드, IS-IS 계층 코드 및 `[AD/Metric]` 값 |
 | `ROUTING_TABLE_SUMMARY_DISCARD` | OSPF·EIGRP 요약 경로의 `is a summary` 문구와 `Null0` 등 숫자형 Null discard next-hop |
 | `ROUTING_REDISTRIBUTION` | `show ip protocols`의 `Redistributing:` 필드, OSPF `External Routes from`, EIGRP/RIP 및 BGP·IS-IS·IGRP·connected·static 재분배 소스 |
 | `ROUTING_PROTOCOL_DISTANCE` | `show ip protocols`의 EIGRP `Distance: internal ... external ...` 및 RIP·OSPF·ODR `Distance: (default is ...)` 값 |
 | `ROUTING_PROTOCOLS_AND_MISC` | EIGRP/BGP/RIP/HSRP/OSPF/MST/PVST/STP, route-map/prefix-list/ACL, SSH/Telnet/TFTP/NTP/SNMP, 표 헤더 |
 | `PROMPTS` | 설정 모드 프롬프트(`#`), privileged EXEC 프롬프트(`#`), 사용자 EXEC 프롬프트(`>`) |
+
+### NAT 변환 테이블 색상
+
+사용자 요청에 따라 V2/V3 통합 목록을 유지합니다. 실패했던 `DEFINE`/위치 lookbehind 규칙을 제거하고, 사용자 화면에서 ICMP와 정적 NAT 강조가 성공한 Suffix 규칙으로 교체했습니다. 주소 규칙은 Inside global → Inside local → Outside local → Outside global 순서이고 `---` 규칙은 그 뒤에 둡니다.
+
+색상은 Inside global=골드, Inside local=시안, Outside local=하늘색, Outside global=보라입니다. 주소와 포트/ICMP 식별자를 함께 강조하며 `Pro`는 흰색, 프로토콜은 분홍, `---`는 은색입니다.
+
+통합 우선순위는 **기존 ACL 행 규칙 → 문맥 IP 보호 규칙 → NAT 규칙 → 나머지 기존 규칙**입니다. `host/network/to/is/from/via/neighbor/Originator:/list:` 뒤 주소 및 쉼표 뒤 주소에는 일반 IP 색을 우선 적용합니다. 이 보호 규칙은 확인된 오탐 사례를 줄이기 위한 것이며 모든 비-NAT 출력을 구분하지는 못합니다.
+
+**검증 범위:** NAT 70개 강조 구간, 문맥 보호 6개 사례와 V2/V3 구조 검사를 통과했습니다. 재설치 후 사용자 통합 화면에서 ICMP/정적 NAT, Standard/Extended ACL, gateway와 표시된 라우팅 경로의 의도한 강조를 확인했습니다. 모든 BGP/라우팅 출력까지 검증된 것은 아니며, 임의의 문장 끝 IP, 불완전 NAT 행, IPv6/verbose/줄바꿈 출력은 오색칠될 수 있습니다. [상태와 제한](docs/NAT-Highlighting-Status.md), AI 작업 전에는 [프로젝트 지침](AGENTS.md)을 참고하세요.
+
+검증 명령: `pwsh -NoProfile -File tests/NatTranslations.Tests.ps1`. Git/PCRE는 문법 평가에, .NET은 매칭 위치와 우선순위 모델에 사용합니다. SecureCRT 자체 렌더링 테스트가 아닙니다. 기존 `Update-NatMatchers.ps1` 생성기는 실패한 규칙을 되살리지 않도록 비활성화했습니다.
 
 ## 정규식 및 매칭 케이스 주의사항
 

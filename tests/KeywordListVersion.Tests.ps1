@@ -41,7 +41,7 @@ $v2Rows = @($v2Lines | Where-Object { $_ -match '^\s+"' })
 $v3Rows = @($v3Lines | Where-Object { $_ -match '^\s+"' })
 
 function Get-InternalBlankLineNumbers {
-    param([Parameter(Mandatory = $true)][string[]]$Lines)
+    param([Parameter(Mandatory = $true)][AllowEmptyString()][string[]]$Lines)
 
     return @(
         for ($index = 0; $index -lt $Lines.Count; $index++) {
@@ -167,8 +167,8 @@ foreach ($fixture in $validatorFixtures) {
 }
 Write-Host '[PASS] V2/V3 fixtures reject internal blank lines and accept the final newline artifact'
 
-Assert-Equal -Actual $v2Rows.Count -Expected 348 -Message 'V2 must retain exactly 348 keyword rows'
-Assert-Equal -Actual $v3Rows.Count -Expected 348 -Message 'V3 must retain exactly 348 keyword rows'
+Assert-Equal -Actual $v2Rows.Count -Expected 368 -Message 'V2 must retain exactly 368 keyword rows'
+Assert-Equal -Actual $v3Rows.Count -Expected 368 -Message 'V3 must retain exactly 368 keyword rows'
 
 $v2CountMatch = [System.Text.RegularExpressions.Regex]::Match(
     $v2Text,
@@ -196,11 +196,11 @@ for ($index = 0; $index -lt $v2Rows.Count; $index++) {
 }
 
 function Get-SectionOrder {
-    param([Parameter(Mandatory = $true)][string[]]$Lines)
+    param([Parameter(Mandatory = $true)][AllowEmptyString()][string[]]$Lines)
 
     return @(
         foreach ($line in $Lines) {
-            $match = [regex]::Match($line, '^\s+"\[\*(?<name>[^"]+)",')
+            $match = [regex]::Match($line, '^\s+"\[\*\](?<name>[^"]+)",')
             if ($match.Success) {
                 $match.Groups['name'].Value
             }
@@ -209,6 +209,9 @@ function Get-SectionOrder {
 }
 
 $expectedSectionOrder = @(
+    'SHOW_ACCESS_LISTS',
+    'NAT_CONTEXT_GUARDS',
+    'SHOW_IP_NAT_TRANSLATIONS',
     'BGP_SHOW_IP',
     'CRITICAL_ERRORS_AND_DOWN_STATES',
     'GOOD_AND_INTERFACE_STATES',
@@ -249,7 +252,7 @@ $legacyKeywordVersionPromptText = '설치할 키워드 목록 버전' + '을 선
 Assert-True -Condition (-not $installerText.Contains($legacyKeywordVersionPromptText)) -Message 'installer must not advertise a V2/V3 keyword-list prompt'
 Assert-True -Condition $installerText.Contains('return $KeywordListVersion.ToUpperInvariant()') -Message 'explicit V2 or V3 selection must be preserved'
 Assert-True -Condition $installerText.Contains('$null = $arguments.Add(''-KeywordListVersion'')') -Message 'self-update restart must propagate the selected version parameter'
-Assert-True -Condition $installerText.Contains('$script:UpdateFileNames = @(') -and $installerText.Contains("'PNET-Cisco-Dark-V3.ini'") -Message 'self-update file list must include the V3 asset'
+Assert-True -Condition ($installerText.Contains('$script:UpdateFileNames = @(') -and $installerText.Contains("'PNET-Cisco-Dark-V3.ini'")) -Message 'self-update file list must include the V3 asset'
 Assert-True -Condition $installerText.Contains("V2로 대체 설치하지 않습니다.") -Message 'missing historical V3 assets must not silently fall back to V2'
 Assert-True -Condition $installerText.Contains('$defaultBackupFileName = if ($script:SelectedKeywordListVersion -eq ''V3'')') -Message 'uninstall/install Default.ini backups must be version-aware'
 

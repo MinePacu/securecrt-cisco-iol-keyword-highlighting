@@ -4,6 +4,24 @@
 
 ## [Unreleased]
 
+## [1.0.2] - 2026-09-05
+
+### Fixed
+
+- Integrated screenshot-verified NAT suffix rules into V2/V3 with placeholders last. Promoted existing ACL row rules and added contextual IPv4 guards before NAT. Removed failed consuming-prefix, DEFINE, and position rules. Both production lists contain 368 synchronized rows.
+- Confirmed integrated V3 rendering in user-provided screenshots for ICMP and static NAT, Standard/Extended ACL rows, gateway addresses, displayed static/connected/local routes, prompts, and Invalid errors.
+
+### Added
+
+- Added column-specific highlighting for basic Cisco `show ip nat translations` output in V2/V3, including address-only mappings, PAT, ICMP identifiers and placeholders. Narrowed the BGP route-value matcher to require a numeric metric after the next hop. / V2/V3에 기본 NAT 변환 테이블의 열별 색상, 주소 변환·PAT·ICMP 식별자·빈 필드 강조를 추가하고, BGP 경로 값 규칙이 next hop 뒤의 숫자 metric을 요구하도록 조정했습니다.
+- Added Cisco `show access-list(s)` highlighting to the synchronized V2/V3 keyword lists for Standard/Extended/IPv4/IPv6 ACL headers and `permit`/`deny`/`remark` entries, including numbered and unnumbered IOS output forms with regression coverage. / 동기화된 V2/V3 키워드 목록에 Standard/Extended/IPv4/IPv6 ACL 제목과 번호형·무번호형 IOS 출력의 `permit`/`deny`/`remark` 항목을 지원하는 Cisco `show access-list(s)` 하이라이트를 추가하고 회귀 검증을 보강했습니다.
+
+### Validation and known limitations
+
+- Keyword-list version and NAT regression checks pass, including 70 NAT spans per version and six contextual protection cases. Diagnostic fixtures and project guidance document successful and failed native experiments.
+- The broader keyword test still fails at the previously documented BGP `i` pattern expectation mismatch; this release does not change that production rule.
+- Unguarded non-NAT suffixes and incomplete NAT rows can receive incorrect column colors. Native coverage does not extend to all BGP output, TCP/UDP, IPv6, verbose output, or wrapped lines.
+
 ## [1.0.1] - 2026-09-02
 
 ### Added
