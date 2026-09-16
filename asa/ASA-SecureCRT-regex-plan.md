@@ -4,8 +4,8 @@
 
 계획을 다음 두 개의 SecureCRT 키워드 목록으로 옮겼다.
 
-- ASA-SecureCRT-v1-Core.ini: 확인된 상태·심각도 중심의 31개 규칙
-- ASA-SecureCRT-v1-Extended.ini: Core에 정보성 출력과 설정 구조를 더한 42개 규칙
+- ASA-SecureCRT-v1-Core.ini: 확인된 상태·심각도 중심의 46개 규칙
+- ASA-SecureCRT-v1-Extended.ini: Core에 정보성 출력과 설정 구조·진단 카운터를 더한 64개 규칙
 
 적용 절차와 보류 항목은 ASA-SecureCRT-v1-README.md에 기록했다.
 
@@ -16,7 +16,7 @@
 
 - SecureCRT의 정규식 옵션과 phrases/substrings 매칭을 사용한다. 단어 전용 모드는 사용하지 않는다. [제품 안내](https://www.vandyke.com/products/securecrt/), [8.7 기능 안내](https://www.vandyke.com/aboutus/news/pressreleases/securecrt/securecrt87b.html)
 - 대소문자를 구분한다. 공백은 `[ \t]`로 표현하여 줄을 넘지 않는다.
-- lookbehind, lookahead, 그룹별 색상, 명령 실행 문맥 추적에 의존하지 않는다. **정규식 전체 일치 부분**에 한 가지 색상이 적용되는 설계다.
+- lookbehind, 그룹별 색상, 명령 실행 문맥 추적에 의존하지 않는다. **정규식 전체 일치 부분**에 한 가지 색상이 적용되는 설계다. 연결 종류 규칙에는 실제 SecureCRT 화면에서 확인된 `show failover`의 `TCP conn`/`UDP conn` 오탐을 제외하기 위한 짧은 negative lookahead 하나만 사용한다.
 - 표의 정규식은 그대로 입력할 완성 패턴이다. 코드 블록의 역슬래시를 추가 이스케이프하지 않는다. INI 직렬화는 별도 문제다.
 - `^`와 `$`는 한 출력 행을 대상으로 설계했다. SecureCRT에서 자동 줄바꿈·화면 너비·스크롤백에 따른 동작을 검증한다.
 - 상태를 엄격하게 구분하려면 일부 규칙은 행 앞부분까지 강조한다. 이는 문맥 없이 상태 단어만 강조할 때의 오탐을 줄이기 위한 선택이다.
@@ -87,7 +87,7 @@ Severity 6은 기본색. 타임스탬프를 허용하도록 줄 시작 앵커를
 
 Active/Active의 Group n State 행은 별도 규칙으로 `^[ \t]*Group[ \t]+[0-9]+[ \t]+State:[ \t]+Active[ \t]*$`(하늘색), 끝을 Standby Ready로 바꾼 규칙(보라)을 사용한다. Cisco 공식 예제에는 Group 1 Failed Backplane Failure처럼 현재 실패를 나타내는 행도 있으므로 Group 상태 Failed만 빨강으로 추가했다. 일반 인터페이스의 Failed는 Normal/Waiting/Not-Monitored 문맥을 확인한 뒤 별도 추가한다. [Cisco Active/Active 예제](https://www.cisco.com/c/en/us/td/docs/security/asa/asa-cli-reference/S/asa-command-ref-S/show-f-to-show-ipu-commands.html)
 
-인터페이스별 HA 상태는 초기에는 보류한다. Normal 뒤에 Waiting/Not-Monitored 등이 붙는 경우를 모두 초록으로 처리하면 실제 모니터링 범위를 오해할 수 있다. Failover Off 또한 단독 장비에서는 정상일 수 있어 자동 장애색을 배정하지 않는다.
+인터페이스별 HA 상태는 `Failed`와 `Normal (Waiting)`만 각각 빨강·주황으로 추가했다. `Normal (Monitored)`·`Not-Monitored`는 정상/장애를 추측하지 않고 기본색으로 남긴다. `Sync Done`과 `Sync Skipped`는 모두 초록이다. Failover Off 또한 단독 장비에서는 정상일 수 있어 자동 장애색을 배정하지 않는다.
 
 ## 6. VPN
 
@@ -133,13 +133,13 @@ remark 행은 동작 규칙에 매칭되지 않는다. hitcnt는 괄호 전체�
 | NAT 구획 | `^[ \t]*(Manual|Auto) NAT Policies \(Section [123]\)` | 하늘색 |
 | NAT 카운터 | `(^|[ ,\t])(translate_hits|untranslate_hits)[ \t]*=[ \t]*[0-9]+([, \t]|$)` | 하늘색 |
 | NAT 변환 시작 | `^[ \t]*(NAT|PAT) from[ \t]` | 하늘색 |
-| 연결 종류 | `^[ \t]*(TCP|UDP|ICMP)[ \t]+` | 하늘색 |
+| 연결 종류 | `^[ \t]*(TCP|UDP|ICMP)[ \t]+(?!conn(?:[ \t]|$))` | 하늘색 |
 | CPU 필드 | `(CPU utilization for 5 seconds[ \t]*=|1 minute:|5 minutes:)[ \t]*[0-9]+%` | 하늘색 |
 | 메모리 | `^[ \t]*(Free|Used|Total) memory:[ \t]+[0-9]+[ \t]+bytes[ \t]+\([0-9]+%\)` | 하늘색 |
 | ASA 버전 | `^Cisco Adaptive Security Appliance Software Version[ \t]+[^ \t]+` | 하늘색 |
 | 제품 ID | `^[ \t]*PID:[ \t]*[^,\r\n]+` | 하늘색 |
 
-NAT 역방향 hit는 실패 카운터가 아니다. conn flag의 U/I/O 등을 단독 매칭하지 않는다. CPU/메모리는 초기 임계치를 임의 설정하지 않고 수치만 강조한다. 이후 임계치를 정해도 정규식은 지속 시간·증가 추세를 계산하지 못한다. 메모리 Total의 100%를 자원 고갈로 오인하는 전역 퍼센트 규칙은 금지한다.
+NAT 역방향 hit는 실패 카운터가 아니다. conn flag의 U/I/O 등을 단독 매칭하지 않는다. 2026-09-15 실제 SecureCRT 화면에서 `show failover` 통계의 `TCP conn`과 `UDP conn`이 연결 종류 규칙에 걸리는 오탐을 확인하여, 바로 뒤 토큰이 `conn`인 경우만 제외했다. 재설치 후 후속 화면에서 두 통계 토큰은 기본색으로 복원되고 실제 `show xlate`의 `TCP PAT from ...` 강조는 유지되는 것을 확인했다. CPU/메모리는 초기 임계치를 임의 설정하지 않고 수치만 강조한다. 이후 임계치를 정해도 정규식은 지속 시간·증가 추세를 계산하지 못한다. 메모리 Total의 100%를 자원 고갈로 오인하는 전역 퍼센트 규칙은 금지한다.
 
 근거: [NAT·xlate·conn 예제](https://www.cisco.com/c/en/us/support/docs/ip/network-address-translation-nat/118958-configure-asa-00.html), [CPU·메모리 예제](https://www.cisco.com/c/en/us/support/docs/security/asa-5500-x-series-next-generation-firewalls/113185-asaperformance.html), [version](https://www.cisco.com/c/en/us/td/docs/security/asa/asa-cli-reference/S/asa-command-ref-S/m_show_u-show_z.html), [inventory](https://www.cisco.com/c/en/us/td/docs/security/asa/asa-cli-reference/S/asa-command-ref-S/show-f-to-show-ipu-commands.html).
 
@@ -156,5 +156,22 @@ show running-config는 1차에 syslog/상태 규칙과의 오탐 검증 대상�
 7. 대표 세션에만 시범 적용한다. 기존 목록을 보관하며 목록 선택 복원으로 롤백한다. ASA logging 수준 변경은 포함하지 않는다.
 
 완료 기준: 준비된 양성·음성 샘플이 의도대로 매칭되고, 실제 SecureCRT에서 표시·줄바꿈·반응성을 확인한 후 배포한다. 현재는 INI 초안 생성과 오프라인 형식·정규식 검증까지 완료했으며, SecureCRT UI/실장비 검증은 남아 있다.
+
+## 10. 추가 운영 상태 규칙
+
+2026-09-15 Cisco 공식 명령 출력으로 다음 규칙을 추가했다. Core는 현재 상태가 명확하고 행 문맥이 충분한 항목만, Extended는 누적·진단용 카운터만 넣는다.
+
+| 계열 | 목록 | 표시 | 범위 |
+|---|---|---|---|
+| ASAv 라이선스 | Core | Unlicensed/Noncompliant/No active entitlement 빨강, Compliant 초록 | `show version`, 라이선스 경고 |
+| SLA Track | Core | UP·OK 초록, DOWN 빨강 | `show track` |
+| AAA | Core | ACTIVE 초록, FAILED 빨강 | `show aaa-server` |
+| 운영 제어·물리 | Core | 예약 reload 주황, `Failure Detected`/`Power Problem` 빨강 | `show reload`, `show environment`; ASAv에는 물리 센서 출력이 없을 수 있음 |
+| 서비스 정책·ASP | Extended | 0이 아닌 drop 노랑 | `show service-policy`, 대표 `show asp drop` 원인. ACL 차단도 포함될 수 있어 빨강 금지 |
+| 자원·OSPF·인증서 | Extended | resource Denied 노랑, OSPF FULL 초록/불완전 주황, 등록 보류 주황 | `show resource usage`, `show ospf neighbor`, `show crypto ca certificates` |
+
+`show failover state`의 Last Failure Reason은 과거 실패가 해소돼도 남을 수 있으므로 일반 `Failure` 단어 규칙을 만들지 않는다. `show blocks`는 숫자 열만인 행이 많아 Line Mode에서 명령 문맥을 보장할 수 없으므로 제외했다. BGP 요약의 열 배치는 버전·출력 폭에 민감하여 실제 ASA 샘플을 확보한 뒤 별도 규칙으로 다룬다. 인증서 날짜·CPU/메모리 비율·누적 drop은 시간 경과나 임계치를 정규식이 계산할 수 없으므로 현재 장애색을 주지 않는다.
+
+추가 항목은 `tests/AsaKeywordLists.Tests.ps1`의 62개 양성/음성 사례에서 V2 형식·선언값·Core/Extended 동기화·정규식 컴파일과 함께 검사한다. 현재 ASAv 9.8(1) 랩에는 SLA·AAA·OSPF·물리 센서가 구성되어 있지 않으므로 이 항목의 SecureCRT 네이티브 화면 검증은 별도 상태로 유지한다.
 
 INI 배포 시 [VanDyke 공식 가져오기 절차](https://www.vandyke.com/support/scripting/scripting-examples/import-keyword-highlighting-ini-files.html)를 따른다. 설정 경로는 OS별 추측 경로 대신 SecureCRT의 Configuration Paths에서 확인한다.

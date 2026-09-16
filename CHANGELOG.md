@@ -4,6 +4,18 @@
 
 ## [Unreleased]
 
+## [1.0.3] - 2026-09-16
+
+### Added
+
+- Merged the 63 regex rules from the validated ASA Extended profile (excluding its profile-only default-color fallback) into a new `ASA_FIREWALL_OPERATIONAL_STATES` block in the synchronized V2/V3 production lists. The block follows `BGP_SHOW_IP` and precedes broad error/state rules; the production lists now contain 432 rows.
+
+### Validation and known limitations
+
+- Confirmed the installed integrated V3 list in user-provided SecureCRT ASA output: failover role/state/sync, historical failure-reason neutrality, ASAv entitlement and Unlicensed warnings, NAT policy counters, `show xlate` `NAT from`, and ASA ACL permit plus zero/nonzero hit counters.
+- V2/V3 mechanical mapping, NAT regression coverage, and 62 ASA output-regression cases pass. `KeywordIni.Tests.ps1` remains unavailable because its pre-existing line-408 literal `…16433 tokens truncated…` produces a PowerShell parser error; it was not changed for this release.
+- An actual ASA deny ACL row and a `TCP PAT` row were not present in the integrated V3 screenshot set, so those two native cases remain unverified.
+
 ## [1.0.2] - 2026-09-05
 
 ### Fixed
