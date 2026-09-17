@@ -4,6 +4,27 @@
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-09-17
+
+### Added
+
+- Integrated the preserved ASA Extended rule set into the root V2/V3 production lists as `ASA_FIREWALL_OPERATIONAL_STATES`, excluding only the standalone default-color fallback. The block covers ASA syslog, interfaces, HA/failover, licensing, SLA/AAA, VPN/ACL/NAT, resource/drop, OSPF, and certificate states. / 보존된 ASA Extended 목록의 default-color fallback을 제외한 63개 규칙을 루트 V2/V3 운영 목록의 통합 ASA 블록으로 병합했습니다.
+- Added `tests/AsaFirewallHighlights.Tests.ps1` to verify the preserved Core/Extended package, 62 ASA output cases, exact 63-rule V2/V3 integration, PCRE syntax, and BGP → ASA → tunnel → broad-state priority.
+- Added synchronized GRE tunnel configuration and interface-state highlighting, DMVPN/NHRP output highlighting, and IKEv1/IKEv2/IPsec session, SA, SPI, transform, packet-counter, and error highlighting to the V2/V3 production lists. / V2/V3 운영 목록에 GRE 터널 설정·인터페이스 상태, DMVPN/NHRP 출력, IKEv1/IKEv2/IPsec 세션·SA·SPI·transform·패킷 및 오류 카운터 강조를 추가했습니다.
+- Added context-anchored `show interfaces Tunnel` highlighting for uppercase `Key 0x...` and `Keepalive set (... sec), retries ...` output after a user screenshot showed both fields remaining uncolored.
+- Added `tests/TunnelingHighlights.Tests.ps1` and representative Cisco IOS/IOS XE fixtures for color spans, PCRE syntax, V2/V3 parity, NAT priority guards, neutral states, and false-positive coverage. / 색상 구간·PCRE 문법·V2/V3 대응·NAT 우선 보호·중립 상태·오탐을 확인하는 터널 전용 fixture와 회귀 검사를 추가했습니다.
+
+### Changed
+
+- Expanded `NAT_CONTEXT_GUARDS` for tunnel source/destination, peer/NBMA/NHS/endpoints, NHRP map configuration, and DMVPN state rows so trailing addresses are not interpreted as NAT columns. With ASA, tunneling, and Key/Keepalive output integrated, both production lists now contain 489 synchronized rows with declaration `000001E9`. / 터널·NHRP·DMVPN 주소가 NAT 열로 오인되지 않도록 문맥 보호를 확장하고 ASA·터널 통합 운영 목록을 489개 행 및 선언값 `000001E9`로 동기화했습니다.
+
+### Validation and known limitations
+
+- Keyword-list version, NAT, and tunneling regression checks pass. The broader keyword test retains its pre-existing BGP `i` expectation mismatch and is not treated as a tunneling regression.
+- Reinstalled the 489-rule integrated V3 list with `-SkipUpdate`; the installed file matches source SHA256 `47D44956F09F3B316EC647D90D34952338B3E89CBF63418E4F2080DF05C83B5A`, retains declaration `000001E9`, and includes the new Key/Keepalive rules. SecureCRT screen verification remains pending.
+- Additional suite execution found unrelated failures in `DefaultIni.Tests.ps1` (`$IsWindows` read-only variable collision) and `InstallerUpdate.Tests.ps1` (in-progress flag string expectation); neither test nor installer code was changed by this work.
+- Tunneling coverage is automated only; SecureCRT native rendering has not yet been verified. VXLAN, MPLS TE, L2TP, CAPWAP, pseudowire, ASA remote-access VPN, wrapped output, and semantic IPv6 address coloring remain outside the verified scope.
+
 ## [1.0.3] - 2026-09-16
 
 ### Added

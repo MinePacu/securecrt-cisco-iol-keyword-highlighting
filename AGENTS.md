@@ -1,13 +1,15 @@
 # 프로젝트 작업 지침
 
-이 파일은 이 프로젝트를 수정하는 AI 에이전트를 위한 지침이다. 2026-09-05 사용자 화면 검증까지 반영했다. 과거 대화 없이 시작하더라도 먼저 이 파일과 `docs/NAT-Highlighting-Status.md`를 읽는다. 이후 새로운 사용자 요청이나 실제 검증 결과가 있으면 그 근거와 함께 갱신한다.
+이 파일은 이 프로젝트를 수정하는 AI 에이전트를 위한 지침이다. 2026-09-17 ASA·터널 통합 자동 검증과 기존 사용자 화면 검증까지 반영했다. 과거 대화 없이 시작하더라도 먼저 이 파일과 `docs/NAT-Highlighting-Status.md`, `docs/ASA-Highlighting-Status.md`, `docs/Tunneling-Highlighting-Status.md`를 읽는다. 이후 새로운 사용자 요청이나 실제 검증 결과가 있으면 그 근거와 함께 갱신한다.
 
 ## 유지해야 할 사용자 결정과 현재 기준
 
 - 사용자는 **NAT 전용 목록으로 전환하지 않고 통합 목록을 유지**하기로 결정했다. 새 요청 없이 별도 목록 선택을 운영 해결책으로 다시 제안하지 않는다.
 - 운영 파일은 `PNET-Cisco-Dark.ini`(V2), `PNET-Cisco-Dark-V3.ini`(V3)이다. 기본 설치 대상은 V3다. `PNET-Cisco-NAT-V3.ini`와 `tests/NAT-*Probe*.ini`는 비교/진단 자료이며 기본 설치 대상으로 바꾸지 않는다.
-- 현재 두 운영 목록은 432개 행, 선언값 `000001B0`이다. 행 수를 바꾸면 선언값·V2/V3 대응·테스트·README를 함께 갱신한다. 이 수치는 영구 제한이 아니라 현재 기준이다.
+- 현재 두 운영 목록은 489개 행, 선언값 `000001E9`이다. 행 수를 바꾸면 선언값·V2/V3 대응·테스트·README를 함께 갱신한다. 이 수치는 영구 제한이 아니라 현재 기준이다.
 - 통합 V3를 재설치한 뒤 사용자 화면에서 NAT, ACL, 일부 라우팅 출력이 정상인 것을 확인했다. 이미 확인한 사례를 다시 처음부터 진단하지 않는다.
+- GRE·DMVPN/NHRP·IKE/IPsec 규칙은 자동 검사를 통과했다. 후속 사용자 화면에서 `show interface tunnel`의 `Key 0x64`와 `Keepalive set (1 sec), retries 3`가 기본색으로 남는 것을 확인해 두 전용 규칙을 추가했고, 2026-09-17 현재 489행 V3를 `-SkipUpdate`로 재설치했다. 원본/설치본 SHA256 일치와 두 신규 규칙 포함을 확인했지만 변경 후 화면 검증은 남아 있다.
+- `asa`의 ASA Extended 63개 정규식은 `ASA_FIREWALL_OPERATIONAL_STATES`로 두 운영 목록에 그대로 병합했다. 이 ASA 규칙은 과거 432행 통합 목록에서 일부 실제 화면 검증 증거가 있다. 현재 489행 ASA+터널 설치본은 원본과 일치하며, 직전 487행 설치본은 timestamp 백업으로 보존됐다.
 
 ## 실제 화면에서 확인한 범위
 
@@ -22,20 +24,6 @@
 
 이 결과는 제공된 화면의 사례에 한정한다. 전체 BGP, 모든 라우팅 출력, TCP/UDP, 임의의 문장에 대한 네이티브 검증 완료로 확대 해석하지 않는다. 화면 증거는 사용자 제공 자료이며 Temp 경로의 원본 이미지가 다음 세션에도 남아 있다고 가정하지 않는다.
 
-## ASA 목록과 통합 상태
-
-- `asa/ASA-SecureCRT-v1-Core.ini`와 `asa/ASA-SecureCRT-v1-Extended.ini`는 별도 Keyword List V2 파일이며, ASA 규칙의 비교·회귀 자료로 유지한다. 기본 설치 대상을 이 목록으로 바꾸지 않는다.
-- 두 목록은 `Match Case=1`, `Regex Line Mode=1`을 유지한다. Core는 46개, Extended는 64개 규칙이다.
-- 2026-09-15 PNETLab `/opt/unetlab/labs/Study/260915_ASA-Failover.unl`의 ASAv 9.8(1) 두 대에서 콘솔 원문을 수집했고, 사용자 제공 SecureCRT 화면에서 Extended의 Primary Active 하늘색, Secondary Standby Ready 보라, NAT 구획·hit·`TCP PAT`·`object network` 하늘색을 확인했다.
-- 최초 화면에서 `show failover` 통계의 `TCP conn`/`UDP conn`이 연결 종류 규칙에 걸리는 오탐이 있었다. Extended 규칙을 `^[ \t]*(TCP|UDP|ICMP)[ \t]+(?!conn(?:[ \t]|$))`로 좁힌 뒤 재설치했고, 후속 화면에서 두 통계 토큰은 기본색, 실제 `TCP PAT`는 하늘색으로 유지되는 것을 확인했다. 이 예외를 제거하거나 다시 넓히지 않는다.
-- 당시 42개였던 V2 Extended를 SecureCRT가 불러온 뒤 설치 파일에 BOM과 동일한 V3 규칙 및 `List Name`을 추가해 재저장하는 동작을 확인했다. 현재 64개 확장본은 재설치·재저장 검증 전이므로, 설치 직후 SHA256 일치와 앱 사용 후 재직렬화된 파일의 구조 검증을 구분한다.
-- 해당 랩은 syslog 비활성, ACL·VPN SA·기본 경로 부재 상태였다. 이 항목과 Active/Active Group 상태의 양성 네이티브 검증까지 완료한 것으로 확대 해석하지 않는다.
-- 2026-09-15에 HA 인터페이스 `Failed`/`Normal (Waiting)`, 동기화 완료, ASAv 라이선스 준수 상태, SLA Track, AAA 서버 상태, 예약 reload, 물리 환경 실패를 Core에 추가했다. Extended에는 0이 아닌 service-policy·ASP drop, resource `Denied`, OSPF 인접 상태, 보류 중인 인증서 등록을 추가했다. 이 추가 항목은 Cisco 공식 출력 기반 자동 테스트만 통과했으며, 현재 랩의 구성 부재 항목은 SecureCRT 네이티브 검증 완료로 보고하지 않는다.
-- 추가 화면 검증에서 `show failover state`의 `Sync Done` 초록, ASAv의 경고형·상태형 `Unlicensed` 빨강을 확인했다. `No active entitlement: ...` 변형은 콜론 뒤 설명 때문에 기존 규칙에서 빠져 패턴을 확장했고, 이 수정본은 재설치 전이다. `Active Ifc Failure`는 현재 Active 상태와 잔존한 Failure Reason을 혼동하지 않도록 Active 토큰만 초록으로 매칭한다.
-- 후속 재설치 화면에서 `No active entitlement: ...` 빨강과 `Active Ifc Failure`의 Active 초록을 확인했다. 마지막 재설치 화면에서 `Standby Ready Ifc Failure`의 Standby Ready 보라까지 확인했고, 뒤의 `Ifc Failure`와 `inside: Failed` 이력은 기본색으로 남았다.
-- ASA 구조·정규식·실출력 회귀는 `pwsh -NoProfile -File tests/AsaKeywordLists.Tests.ps1`로 검사한다.
-- 2026-09-15 사용자가 요청한 통합 작업으로 Extended의 63개 정규식(별도 목록의 default-color fallback 제외)을 V2/V3의 `ASA_FIREWALL_OPERATIONAL_STATES` 블록으로 병합했다. 이 블록은 `BGP_SHOW_IP` 뒤, 범용 `CRITICAL_ERRORS_AND_DOWN_STATES` 앞에 있다. 재설치 뒤 사용자 제공 통합 V3 화면에서 failover의 Primary/Secondary·Active·Standby Ready·Sync Done, `Ifc Failure`/`inside: Failed` 이력 기본색, ASAv entitlement/Unlicensed 빨강, `show nat` 정책·hit 카운터와 `show xlate`의 `NAT from`을 확인했다. 이어진 `show access-list` 화면에서 ASA ACL permit 접두부와 `hitcnt=10` 시안, `hitcnt=0` 회색도 확인했다. 화면에 실제 deny ACL 행과 `TCP PAT` 행은 없으므로 이 두 사례는 통합 네이티브 검증 완료로 보고하지 않는다.
-
 ## 검증된 구현과 순서
 
 현재 블록 순서를 보존한다:
@@ -43,12 +31,18 @@
 1. `SHOW_ACCESS_LISTS`: ACL 행 전체 강조가 NAT보다 우선.
 2. `NAT_CONTEXT_GUARDS`: 알려진 비-NAT 문맥의 IPv4를 일반 주소색으로 보호.
 3. `SHOW_IP_NAT_TRANSLATIONS`: Suffix 주소 규칙을 Inside global → Inside local → Outside local → Outside global 순서로 배치. **`---` 규칙은 네 주소 규칙 뒤**.
-4. `BGP_SHOW_IP` 뒤의 `ASA_FIREWALL_OPERATIONAL_STATES`: ASA 전용 규칙을 범용 오류/정상 상태 규칙보다 먼저 평가한다.
-5. 나머지 기존 블록. 일반 IPv4 규칙을 NAT 앞에 무작정 올리지 않는다.
+4. `BGP_SHOW_IP`: 기존 BGP 상세 출력 우선순위를 유지.
+5. `ASA_FIREWALL_OPERATIONAL_STATES`: ASA Extended 63개 정규식을 터널 및 범용 상태 규칙보다 먼저 평가.
+6. `TUNNEL_GRE_INTERFACE` → `DMVPN_NHRP` → `IKE_IPSEC_STATUS`: 범용 `up/down/disabled/active` 규칙보다 먼저 평가.
+7. 나머지 기존 블록. 일반 IPv4 규칙을 NAT 앞에 무작정 올리지 않는다.
 
 NAT는 주소 토큰에서 매칭을 시작하고 lookahead로 뒤에 남은 endpoint/`---` 필드 수(3/2/1/0)를 검사한다. 공인/사설 IP 여부로 열을 판단하지 않는다. 실제 패턴은 운영 INI를 기준으로 읽고, 문서의 요약을 그대로 새 정규식으로 재구현하지 않는다.
 
 문맥 보호는 `host/network/to/is/from/via/neighbor/Originator:/list:` 뒤 또는 쉼표 뒤 IPv4에 적용한다. 보호 조건 변경 시 NAT 정상 행을 먼저 매칭해 버리지 않는지 검사한다. 기존 BGP 경로 값 규칙의 next-hop 뒤 숫자 metric 조건도 유지한다. 이를 느슨하게 하면 정적 NAT 주소 행과 충돌할 수 있다.
+
+터널 확장 보호는 `source/destination/Peer:/current_peer/endpt.:/address:/NHS:/nhs` 뒤 IPv4, `ip nhrp map` 설정 행, DMVPN `UP/DOWN/NHRP` 표 행에 적용한다. DMVPN 표 행은 줄 끝 target network가 NAT Outside global 색으로 오인되지 않도록 상태별 행 색을 우선 적용한다. `key disabled`, `Keepalive not set`, 0 errors, SA 없음은 그 자체로 장애가 아니므로 중립색을 유지한다.
+
+ASA 블록은 보존된 `asa/ASA-SecureCRT-v1-Extended.ini`의 default-color fallback을 제외한 63개 정규식과 패턴·색상·순서가 같아야 한다. 공통 형식인 `interface ...`, IPsec `#pkts encaps/decaps`, nonzero `#send/#recv errors`는 ASA 블록이 일반 터널 블록보다 먼저 적용되어 ASA 정보색/주의색을 사용한다.
 
 ## 실패한 탐색을 반복하지 말 것
 
@@ -78,12 +72,16 @@ NAT는 주소 토큰에서 매칭을 시작하고 lookahead로 뒤에 남은 end
 ```powershell
 pwsh -NoProfile -File tests/KeywordListVersion.Tests.ps1
 pwsh -NoProfile -File tests/NatTranslations.Tests.ps1
+pwsh -NoProfile -File tests/AsaFirewallHighlights.Tests.ps1
+pwsh -NoProfile -File tests/TunnelingHighlights.Tests.ps1
 pwsh -NoProfile -File tests/KeywordIni.Tests.ps1
-pwsh -NoProfile -File tests/AsaKeywordLists.Tests.ps1
 ```
 
 - 앞의 두 검사는 현재 통과 기준이다. NAT 검사는 버전별 정상 70개 구간/색상, 후보 시작 위치, 6개 문맥 보호 사례 등을 확인한다.
-- `KeywordIni.Tests.ps1`은 2026-09-15 실행에서 408행의 리터럴 `…16433 tokens truncated…` 때문에 PowerShell parser error로 시작조차 하지 못했다. 이는 이번 ASA 병합과 무관한 기존 테스트 파일 손상/불일치다. 원본 근거 없이 해당 테스트를 복구하거나 성공 처리하지 말고, 새 ASA 회귀와 구분한다.
+- `TunnelingHighlights.Tests.ps1`은 V2/V3의 GRE·터널 인터페이스·DMVPN/NHRP·IKE/IPsec 구간, NAT보다 앞선 주소/행 보호, 중립 상태 및 대표 오탐 방지를 확인하며 현재 통과한다.
+- `AsaFirewallHighlights.Tests.ps1`은 보존된 Core 46/Extended 64개 목록, 62개 ASA 출력 사례, fallback을 제외한 Extended 63개 규칙의 V2/V3 통합 일치 및 BGP → ASA → 터널 → 범용 상태 순서를 확인하며 현재 통과한다.
+- `KeywordIni.Tests.ps1`은 마지막 실행에서 기존 BGP `i` 패턴 기대값 불일치로 중단됐다. 테스트는 `|\x20+-\x20+internal\b` 대안을 기대하지만 실제 규칙에는 없다. NAT 및 터널 통합 작업에서 해당 BGP 규칙은 변경하지 않았다. 새 회귀와 구분하되 영구 무시/무조건 성공 처리하지 않는다. 고칠 경우 별도 근거와 BGP 검증이 필요하다.
+- 추가 전체 검사에서 `DefaultIni.Tests.ps1`은 앞선 5개 검사를 통과한 뒤 PowerShell 내장 읽기 전용 `$IsWindows` 변수에 값을 쓰는 line 236에서 중단됐고, `InstallerUpdate.Tests.ps1`은 설치기의 in-progress flag 문자열 기대 불일치로 중단됐다. 터널 작업은 두 테스트 및 설치기 코드를 변경하지 않았으므로 터널 회귀와 구분하되 별도 수정 전까지 성공으로 보고하지 않는다.
 - Git/PCRE 검사는 SecureCRT 검사가 아니다. .NET 후보 위치·우선순위 모델도 실제 렌더러의 처리 구간을 재현한다고 주장하지 않는다. 실패한 과거 패턴도 자동 검사에서는 통과했다.
 - 번들 Git의 `grep -o --column`은 한 줄의 후속 매치에서 실제 시작점 대신 재검색 시작 offset을 보고한 사례가 있다. 정확한 구간 검사에는 현재 테스트의 .NET 계산을 사용한다.
 - `NatProbe2/3/4`, `NatDedicated` 검사는 진단 및 역사적 비교 자료다. 특히 Probe4의 `[KNOWN UNSAFE]`는 보호 없는 Suffix 오탐을 의도적으로 재현한다. 이를 새 통합 실패로 잘못 해석하지 않는다.
@@ -108,4 +106,4 @@ pwsh -NoProfile -File .\Install-KeywordHighlight.ps1 -KeywordListVersion V3 -Ski
 
 ## 문서 갱신
 
-새 화면 결과를 얻으면 이 파일과 `docs/NAT-Highlighting-Status.md`, 관련 README의 검증 상태를 함께 갱신한다. 과거 Probe 문서의 “대기/가설”과 최신 확인 결과를 구분하고, 확인된 통합 성공 사례를 다시 미확인 상태로 되돌리지 않는다.
+새 NAT 화면 결과를 얻으면 `docs/NAT-Highlighting-Status.md`, ASA는 `docs/ASA-Highlighting-Status.md`, 터널은 `docs/Tunneling-Highlighting-Status.md`와 이 파일 및 README를 함께 갱신한다. 과거 Probe 문서의 “대기/가설”과 최신 확인 결과를 구분하고, 확인된 통합 성공 사례를 다시 미확인 상태로 되돌리지 않는다.

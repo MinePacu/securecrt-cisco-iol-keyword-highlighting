@@ -1,0 +1,58 @@
+# ASA 통합 강조 상태
+
+이 문서는 2026-09-17 루트 운영 INI 통합 상태를 기록합니다. 원본 ASA 설계·전용 목록·회귀 자료는 `asa`와 `tests/AsaKeywordLists.Tests.ps1`에 보존되어 있습니다.
+
+## 통합 내용
+
+ASA Extended 목록의 64개 항목 중 별도 목록 전용 default-color fallback을 제외한 63개 정규식을 V2/V3의 `ASA_FIREWALL_OPERATIONAL_STATES` 블록에 패턴·색상·순서 그대로 병합했습니다. tunnel Key/Keepalive 보강 후 두 운영 목록은 489개 행이며 선언값은 `000001E9`입니다. ASA 블록 자체는 변경하지 않았습니다.
+
+블록 순서는 다음과 같습니다.
+
+1. ACL 행 우선 보호
+2. NAT 문맥 보호와 NAT 열 강조
+3. BGP 상세
+4. ASA 운영 상태
+5. GRE/DMVPN/NHRP/IKE/IPsec
+6. 범용 오류·정상 상태 및 나머지 블록
+
+ASA 블록을 터널 및 범용 상태보다 먼저 두어 ASA의 구체적인 행 규칙을 보존합니다. `interface ...`, IPsec `#pkts encaps/decaps`, nonzero `#send/#recv errors`처럼 IOS와 ASA가 공유하는 출력 형식에서는 ASA 정보색 또는 주의색이 우선합니다.
+
+## 포함 범위
+
+- ASA syslog severity 0–5와 7
+- 상세·요약 인터페이스 상태와 nonzero 오류/drop
+- failover Primary/Secondary, Active/Standby Ready, Group, 인터페이스 Failed/Waiting, Sync Done/Skipped
+- ASAv Unlicensed/Noncompliant/entitlement 및 Compliant
+- SLA Track, AAA server, 예약 reload, 환경 실패
+- IKEv1/IKEv2, IPsec packet/error, VPN session/bytes
+- ASA ACL permit/deny와 hitcnt, 정적 기본 경로
+- ASA NAT/xlate/connection, CPU·메모리, 버전·PID, 설정 구획
+- service-policy/ASP/resource drop, OSPF neighbor, 인증서 등록 보류
+
+`TCP conn`과 `UDP conn` failover 통계는 연결 종류 규칙에서 제외하며, 실제 `TCP PAT` 강조는 유지합니다. 0 errors, SA 없음, historical failure reason, Normal (Monitored), zero drop/resource counters 등은 자동 장애로 표시하지 않습니다.
+
+## 검증 상태
+
+다음 검사는 통과합니다.
+
+```powershell
+pwsh -NoProfile -File tests/AsaFirewallHighlights.Tests.ps1
+pwsh -NoProfile -File tests/KeywordListVersion.Tests.ps1
+pwsh -NoProfile -File tests/NatTranslations.Tests.ps1
+pwsh -NoProfile -File tests/TunnelingHighlights.Tests.ps1
+```
+
+ASA 검사는 보존된 Core 46개·Extended 64개 구조, Core 부분집합, 62개 출력 양성/음성 사례, fallback을 제외한 63개 통합 규칙의 V2/V3 일치, PCRE 문법 및 우선순위를 확인합니다.
+
+과거 ASA 통합본에서는 사용자 화면으로 failover Primary/Secondary·Active/Standby Ready·Sync Done, historical `Ifc Failure`/`inside: Failed`의 기본색 유지, ASAv entitlement/Unlicensed 경고, NAT 정책·hit 카운터, `show xlate`의 `NAT from`, ASA ACL permit 및 0/양수 hitcnt를 확인했습니다. 실제 deny ACL 행과 `TCP PAT` 행은 그 화면에 없었습니다. tunnel Key/Keepalive 규칙이 추가된 489행 ASA+터널 통합 V3는 2026-09-17 `-SkipUpdate`로 재설치했고 원본/설치본 SHA256 일치, 선언값 `000001E9`을 확인했습니다. 현재 설치본의 후속 화면 확인 전에는 현재 파일 전체의 네이티브 검증 완료로 확대하지 않습니다.
+
+## 후속 화면 확인
+
+재설치는 완료했습니다. `Default.ini`는 이미 최신이라 변경하지 않았고, 직전 487행 V3 설치본은 `PNET-Cisco-Dark-V3.ini.bak-20260917-112538540`으로 백업했습니다. SecureCRT를 다시 열어 실제 ASA 출력에서 다음을 점검합니다.
+
+- Primary/Secondary, Active/Standby Ready와 historical `Ifc Failure` 분리
+- Sync Done/Skipped와 ASAv license/entitlement
+- `TCP conn`/`UDP conn` 오탐 방지 및 실제 `TCP PAT`
+- ASA ACL permit/deny 및 hitcnt 0/positive
+- IKE/IPsec packet/error와 터널 공통 규칙의 우선 색상
+- 기존 NAT·라우팅·GRE/DMVPN 강조 회귀 여부

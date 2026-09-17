@@ -1,0 +1,66 @@
+interface Tunnel0
+ ip address 10.0.0.1 255.255.255.252
+ tunnel source GigabitEthernet0/0
+ tunnel destination 192.0.2.2
+ tunnel mode gre ip
+ tunnel key 1000
+ tunnel protection ipsec profile WAN-PROFILE
+ ip mtu 1400
+ ip tcp adjust-mss 1360
+Tunnel0 is up, line protocol is up
+Tunnel1 is administratively down, line protocol is down
+Tunnel2 is up, line protocol is down
+  Hardware is Tunnel
+  Encapsulation TUNNEL, loopback not set
+  Keepalive not set
+  Tunnel source 192.0.2.1 (GigabitEthernet0/0), destination 192.0.2.2, fastswitch TTL 255
+  Tunnel protocol/transport GRE/IP, key disabled, sequencing disabled
+  Key 0x64, sequencing disabled
+  Keepalive set (1 sec), retries 3
+  Tunnel TTL 255
+  Checksumming of packets disabled, fast tunneling enabled
+ ip nhrp network-id 100
+ ip nhrp nhs 10.0.0.1
+ ip nhrp map 10.0.0.2 198.51.100.2
+ ip nhrp map multicast dynamic
+Interface: Tunnel0, IPv4 NHRP Details
+IPv4 Registration Timer: 60 seconds
+IPv4 NHS: 10.0.0.1 RE
+Type:Spoke, Total NBMA Peers (v4/v6): 3
+# Ent  Peer NBMA Addr Peer Tunnel Add State  UpDn Tm Attrb    Target Network
+ 1 198.51.100.2 10.0.0.2 UP 00:10:00 D 10.20.0.0/24
+ 1 198.51.100.3 10.0.0.3 DOWN 00:00:12 I 10.30.0.0/24
+ 1 198.51.100.4 10.0.0.4 NHRP 00:00:02 I 10.40.0.0/24
+10.0.0.2/32 via 10.0.0.2
+   Tunnel0 created 00:10:00, expire 00:01:42
+   Type: dynamic, Flags: router implicit
+   NBMA address: 198.51.100.2
+Crypto session current status
+Interface: Tunnel0
+Session status: UP-ACTIVE
+Session status: DOWN-NEGOTIATING
+Peer: 192.0.2.2 port 500 fvrf: (none) ivrf: (none)
+  IKE SA: local 192.0.2.1/500 remote 192.0.2.2/500 Active
+  IPSEC FLOW: permit 47 host 192.0.2.1 host 192.0.2.2
+        Active SAs: 2, origin: crypto map
+dst             src             state          conn-id status
+192.0.2.2       192.0.2.1       QM_IDLE           2003 ACTIVE
+Tunnel-id Local Remote fvrf/ivrf Status
+2 192.0.2.1/500 192.0.2.2/500 (none)/(none) READY
+  Status Description: Negotiation done
+There are no IKEv2 SAs
+  #pkts encaps: 989, #pkts encrypt: 989, #pkts digest: 989
+  #pkts decaps: 989, #pkts decrypt: 989, #pkts verify: 989
+  #send errors 0, #recv errors 2
+  local crypto endpt.: 192.0.2.1, remote crypto endpt.: 192.0.2.2
+  current outbound spi: 0x9B592959
+  inbound esp sas:
+  SA State: active
+  SA State: inactive
+  transform: esp-256-aes esp-sha-hmac
+  Status: ACTIVE(ACTIVE)
+The active peer described a tunnel state
+state = ACTIVE
+0 input errors, 0 CRC, 0 frame
+Pro Inside global Inside local Outside local Outside global
+icmp 203.0.113.10:39829 10.0.0.10:39829 198.51.100.20:39829 198.51.100.20:39829

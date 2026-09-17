@@ -106,9 +106,16 @@ $criticalSectionStart = [array]::IndexOf([string[]]$integratedLines, $criticalSe
 if ($asaSectionStart -lt 0 -or $criticalSectionStart -lt 0 -or $asaSectionStart -ge $criticalSectionStart) {
     throw 'The integrated V2 list must place the ASA block before broad critical-state rules.'
 }
+$asaSectionEnd = $criticalSectionStart
+for ($index = $asaSectionStart + 1; $index -lt $criticalSectionStart; $index++) {
+    if ($integratedLines[$index] -match '^ "\[\*\]') {
+        $asaSectionEnd = $index
+        break
+    }
+}
 
 $integratedAsaRules = @()
-for ($index = $asaSectionStart + 1; $index -lt $criticalSectionStart; $index++) {
+for ($index = $asaSectionStart + 1; $index -lt $asaSectionEnd; $index++) {
     $line = $integratedLines[$index]
     if ($line -notmatch '^ "(?<pattern>.*)",(?<color>[0-9A-Fa-f]{8}),(?<flag>[0-9A-Fa-f]{8})$') {
         throw "Unexpected integrated ASA row: $line"

@@ -5,9 +5,10 @@
 이 설정은 다음 특징을 가집니다.
 
 - 대소문자를 구분합니다. 파일의 `D:"Match Case"=00000001` 설정에 해당합니다.
-- SecureCRT의 `Keyword List V2`와 `Keyword List V3` 형식을 제공합니다. 두 목록은 같은 432개 규칙을 사용합니다.
-- ASA syslog severity, 인터페이스, failover/동기화, ASAv 라이선스, NAT/연결, VPN, 리소스/드롭, OSPF 및 인증서 상태를 별도 ASA 블록으로 제공합니다. 이 블록은 범용 오류/상태 규칙보다 먼저 평가됩니다.
+- SecureCRT의 `Keyword List V2`와 `Keyword List V3` 형식을 제공합니다. 두 목록은 같은 489개 규칙을 사용합니다.
 - `show ip bgp`, `show ip bgp summary`, `show ip bgp neighbors`의 전용 규칙이 generic 상태 규칙보다 먼저 적용되며, neighbor `state = ...` 출력도 강조합니다.
+- GRE 터널 설정·인터페이스 상태, DMVPN/NHRP 및 IKE/IPsec 상태·카운터를 문맥별로 강조합니다.
+- ASA syslog, 인터페이스, failover/동기화, ASAv 라이선스, NAT/연결, VPN, 리소스·드롭, OSPF 및 인증서 상태를 통합 ASA 블록으로 제공합니다.
 - 정규식 패턴으로 상태 문자열, 숫자, IP 주소, 인터페이스 이름, 프롬프트 등을 하이라이트합니다.
 - 키워드 목록 자체에 설치 스크립트, 자동화 명령, 외부 의존성은 포함하지 않습니다.
 
@@ -149,7 +150,7 @@ powershell -ExecutionPolicy Bypass -File .\Install-KeywordHighlight.ps1 -ConfigP
 ## 제공 파일
 
 - `PNET-Cisco-Dark.ini`: SecureCRT용 키워드 하이라이트 목록
-- `PNET-Cisco-Dark-V3.ini`: 같은 432개 규칙을 SecureCRT `Keyword List V3` 형식으로 저장한 키워드 하이라이트 목록
+- `PNET-Cisco-Dark-V3.ini`: 같은 489개 규칙을 SecureCRT `Keyword List V3` 형식으로 저장한 키워드 하이라이트 목록
 - `README.md`: 설정 범위, 설치/제거 절차, 적용 시 주의사항 및 그룹/색상 설명
 - `Install-KeywordHighlight.ps1`: Windows용 자동 설치/제거 PowerShell 스크립트
 
@@ -163,7 +164,7 @@ powershell -ExecutionPolicy Bypass -File .\Install-KeywordHighlight.ps1 -ConfigP
 
 SecureCRT가 실행 중이어도 `-Force`로 진행할 수 있지만, SecureCRT가 파일을 다시 저장하면서 변경 내용을 덮어쓸 수 있습니다. 따라서 설치·제거 전에는 SecureCRT를 종료하고, 설치 후에는 SecureCRT를 다시 시작해 저장된 출력 또는 테스트 장비에서 결과를 확인하십시오.
 
-2026-09-15 사용자 제공 화면에서 통합 V3의 ASA failover 역할·상태·동기화, ASAv entitlement/Unlicensed, NAT 정책·hit 카운터, `show xlate`의 `NAT from`, 그리고 `show access-list`의 permit 접두부·양/영 hit 카운터 색상을 확인했습니다. 실제 deny ACL 행과 `TCP PAT`는 그 화면에 없었으므로 해당 사례의 통합 화면 검증은 별도로 남아 있습니다.
+2026-09-15 사용자 제공 화면에서 통합 V3의 ASA failover 역할·상태·동기화, ASAv entitlement/Unlicensed, NAT 정책·hit 카운터, `show xlate`의 `NAT from`, 그리고 `show access-list`의 permit 접두부·양/영 hit 카운터 색상을 확인했습니다. 실제 deny ACL 행과 `TCP PAT`는 그 화면에 없었으므로 해당 사례의 통합 화면 검증은 별도로 남아 있습니다. 2026-09-17 터널 `Key`/`Keepalive set` 규칙을 포함한 489행 V3를 다시 설치했으며, 이 두 신규 규칙의 후속 화면 확인은 아직 남아 있습니다.
 
 ## 색상 코드
 
@@ -196,7 +197,10 @@ INI의 색상값은 일반적인 SecureCRT/Windows `COLORREF` 저장 방식인 `
 | 그룹 | 강조 대상 |
 |---|---|
 | `SHOW_IP_NAT_TRANSLATIONS` | 기본 NAT 변환 테이블의 프로토콜, 네 주소 열과 포트·ICMP 식별자, `---` |
-| `ASA_FIREWALL_OPERATIONAL_STATES` | ASA syslog severity, 인터페이스, failover/동기화, 라이선스, NAT/연결, VPN, 리소스/드롭, OSPF 및 인증서 상태 |
+| `ASA_FIREWALL_OPERATIONAL_STATES` | ASA syslog, 인터페이스, failover/HA, 라이선스, SLA/AAA, VPN/ACL/NAT, 자원·drop·OSPF·인증서 상태 |
+| `TUNNEL_GRE_INTERFACE` | `interface Tunnel`, source/destination/mode/protection 설정, `show interfaces Tunnel`의 상태·GRE transport·중립 옵션 |
+| `DMVPN_NHRP` | `show dmvpn`, `show ip nhrp`, NBMA/NHS·Hub/Spoke·NHRP 설정 및 상태 표 |
+| `IKE_IPSEC_STATUS` | crypto session, IKEv1/IKEv2 SA, IPsec SA·SPI·transform·트래픽/오류 카운터 |
 | `CRITICAL_ERRORS_AND_DOWN_STATES` | `administratively down`, `err-disabled`, 불일치, 실패/오류, shutdown, down 등 장애·다운 상태 |
 | `GOOD_AND_INTERFACE_STATES` | up, connected, enabled, permit, success, passed 및 `down->up` 등 정상·회복 상태 |
 | `STP_RAPID_PVST_MST` | Root/Bridge ID, Root Port, 역할(Desg/Altn/Back), FWD/BLK, PVST/RSTP/MST, PortFast·Guard·inconsistent |
@@ -233,6 +237,24 @@ INI의 색상값은 일반적인 SecureCRT/Windows `COLORREF` 저장 방식인 `
 
 검증 명령: `pwsh -NoProfile -File tests/NatTranslations.Tests.ps1`. Git/PCRE는 문법 평가에, .NET은 매칭 위치와 우선순위 모델에 사용합니다. SecureCRT 자체 렌더링 테스트가 아닙니다. 기존 `Update-NatMatchers.ps1` 생성기는 실패한 규칙을 되살리지 않도록 비활성화했습니다.
 
+### GRE·DMVPN·IKE/IPsec 강조
+
+터널 관련 규칙은 기존 BGP 상세 블록 다음, 범용 상태 블록 전에 배치합니다. GRE·DMVPN·NHRP·IKE·IPsec 기능명은 핫 핑크, 필드명은 라이트 스카이 블루, 분류·프로파일은 바이올렛, 정상 상태는 초록, 협상/불완전 상태는 주황, 명시적 실패는 빨강을 사용합니다. `key disabled`, `Keepalive not set`, 0 errors, SA 없음은 단독으로 장애를 뜻하지 않으므로 은색입니다.
+
+`show interfaces Tunnel`의 대문자 출력은 `Key 0x...`를 골드로, `Keepalive set (<n> sec), retries <n>` 전체를 라이트 스카이 블루로 강조합니다. Key 규칙은 같은 행의 `sequencing enabled/disabled` 구조까지 확인해 일반 설명문의 `Key`와 구분합니다.
+
+터널 endpoint와 NBMA 주소, DMVPN 표의 target network가 NAT Suffix 규칙에 의해 Outside global 색으로 오인되지 않도록 `NAT_CONTEXT_GUARDS`가 먼저 보호합니다. `ip nhrp map`과 DMVPN 표 행은 줄 전체 문맥을 사용하고, 일반 문장의 `tunnel`, `active`, `state`, `peer`는 터널 전용 규칙으로 강조하지 않습니다.
+
+자동 검증은 `pwsh -NoProfile -File tests/TunnelingHighlights.Tests.ps1`로 실행합니다. V2/V3 패턴·색상·우선순위, Git/PCRE 문법, .NET 구간, 대표 정상/장애/중립 사례 및 오탐 방지를 확인합니다. 실제 SecureCRT 화면 검증은 아직 수행하지 않았으므로 [터널 강조 상태](docs/Tunneling-Highlighting-Status.md)의 명령별 체크리스트를 사용해 별도로 확인해야 합니다.
+
+### ASA 통합 강조
+
+보존된 ASA Extended 목록의 default-color fallback을 제외한 63개 정규식을 `ASA_FIREWALL_OPERATIONAL_STATES` 블록으로 V2/V3에 병합했습니다. 순서는 BGP 상세 다음, GRE/DMVPN/IKE와 범용 오류·상태 블록 전입니다. 따라서 ASA와 IOS가 공유하는 `interface ...`, IPsec packet/error 출력에서는 ASA 블록의 검증된 정보색·주의색이 먼저 적용됩니다.
+
+ASA 블록은 syslog severity, 상세·요약 인터페이스, failover 역할과 동기화, ASAv 라이선스, SLA Track, AAA, reload·환경 실패, IKE/IPsec, ASA ACL/hitcnt, 기본 경로, NAT/xlate/연결, CPU·메모리, service-policy/ASP/resource drop, OSPF 및 인증서 등록 상태를 포함합니다. `TCP conn`/`UDP conn` failover 통계 오탐 방지 예외도 유지합니다. 자세한 증거 수준과 화면 검증 범위는 [ASA 강조 상태](docs/ASA-Highlighting-Status.md)를 참고하십시오.
+
+통합 검증은 `pwsh -NoProfile -File tests/AsaFirewallHighlights.Tests.ps1`로 실행합니다. 보존된 Core/Extended 구조와 62개 출력 회귀, 운영 V2/V3에 병합된 63개 규칙의 패턴·색상·순서·PCRE 문법을 함께 확인합니다.
+
 ## 정규식 및 매칭 케이스 주의사항
 
 - `Match Case=1`이므로 `up`, `UP`, `Up`은 서로 다르게 취급될 수 있습니다. 파일은 자주 나타나는 대문자/소문자 변형을 일부 `(?:...)` 대안으로 직접 열거하지만, 모든 혼합형을 포함한다는 보장은 없습니다.
@@ -256,7 +278,7 @@ INI의 색상값은 일반적인 SecureCRT/Windows `COLORREF` 저장 방식인 `
 `Install-KeywordHighlight.ps1`을 통해 키워드 파일과 기본 세션 옵션을 설치할 수 있지만, 실제 표시 여부는 다음과 같이 수동으로 검증해야 합니다.
 
 1. SecureCRT를 다시 시작하고 기본 세션 또는 테스트 세션을 엽니다.
-2. 정상/장애 상태, STP, EtherChannel, HSRP, OSPF, VLAN/트렁크 및 프롬프트가 포함된 저장 출력 또는 테스트 장비 출력으로 확인합니다.
+2. 정상/장애 상태, STP, EtherChannel, HSRP, OSPF, VLAN/트렁크, GRE/DMVPN/IKE/IPsec 및 프롬프트가 포함된 저장 출력 또는 테스트 장비 출력으로 확인합니다.
 3. 대소문자, 줄 시작 위치, 축약 표기, IPv4/MAC/인터페이스 형식이 실제 패턴과 일치하는지 확인합니다.
 4. 색상이 보이지 않거나 겹쳐 보이면 `Default.ini`의 일곱 옵션, 선택된 키워드 세트, 터미널 테마 및 해당 SecureCRT 버전의 정규식 지원 범위를 점검합니다.
 

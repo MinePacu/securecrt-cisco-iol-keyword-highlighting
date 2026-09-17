@@ -58,6 +58,8 @@ Assert-Equal -Actual (@(Get-InternalBlankLineNumbers -Lines $v2Lines).Count) -Ex
 Assert-Equal -Actual (@(Get-InternalBlankLineNumbers -Lines $v3Lines).Count) -Expected 0 -Message 'V3 must not contain internal blank lines'
 Assert-True -Condition ($v2Text.EndsWith("`n") -or $v2Text.EndsWith("`r")) -Message 'V2 fixture must retain its final newline'
 Assert-True -Condition ($v3Text.EndsWith("`n") -or $v3Text.EndsWith("`r")) -Message 'V3 fixture must retain its final newline'
+Assert-Equal -Actual ([regex]::Matches($v2Text, "(?<!`r)`n").Count) -Expected 0 -Message 'V2 must retain consistent CRLF line endings'
+Assert-Equal -Actual ([regex]::Matches($v3Text, "(?<!`r)`n").Count) -Expected 0 -Message 'V3 must retain consistent CRLF line endings'
 
 $installerText = [System.IO.File]::ReadAllText($installerPath)
 $installerTokens = $null
@@ -167,8 +169,8 @@ foreach ($fixture in $validatorFixtures) {
 }
 Write-Host '[PASS] V2/V3 fixtures reject internal blank lines and accept the final newline artifact'
 
-Assert-Equal -Actual $v2Rows.Count -Expected 432 -Message 'V2 must retain exactly 432 keyword rows'
-Assert-Equal -Actual $v3Rows.Count -Expected 432 -Message 'V3 must retain exactly 432 keyword rows'
+Assert-Equal -Actual $v2Rows.Count -Expected 489 -Message 'V2 must retain exactly 489 keyword rows'
+Assert-Equal -Actual $v3Rows.Count -Expected 489 -Message 'V3 must retain exactly 489 keyword rows'
 
 $v2CountMatch = [System.Text.RegularExpressions.Regex]::Match(
     $v2Text,
@@ -214,6 +216,9 @@ $expectedSectionOrder = @(
     'SHOW_IP_NAT_TRANSLATIONS',
     'BGP_SHOW_IP',
     'ASA_FIREWALL_OPERATIONAL_STATES',
+    'TUNNEL_GRE_INTERFACE',
+    'DMVPN_NHRP',
+    'IKE_IPSEC_STATUS',
     'CRITICAL_ERRORS_AND_DOWN_STATES',
     'GOOD_AND_INTERFACE_STATES',
     'STP_RAPID_PVST_MST',
@@ -240,9 +245,9 @@ $expectedSectionOrder = @(
     'BGP_SHOW_IP_NEIGHBORS',
     'PROMPTS'
 )
-Assert-Equal -Actual ((Get-SectionOrder -Lines $v2Lines) -join '|') -Expected ($expectedSectionOrder -join '|') -Message 'V2 sections must retain alpha-4 ordering with BGP summary and neighbor blocks late'
-Assert-Equal -Actual ((Get-SectionOrder -Lines $v3Lines) -join '|') -Expected ($expectedSectionOrder -join '|') -Message 'V3 sections must retain alpha-4 ordering with BGP summary and neighbor blocks late'
-Write-Host '[PASS] V2/V3 BGP summary and neighbor sections retain alpha-4 late-file ordering'
+Assert-Equal -Actual ((Get-SectionOrder -Lines $v2Lines) -join '|') -Expected ($expectedSectionOrder -join '|') -Message 'V2 sections must retain NAT/BGP/ASA/tunnel priority and late BGP summary/neighbor ordering'
+Assert-Equal -Actual ((Get-SectionOrder -Lines $v3Lines) -join '|') -Expected ($expectedSectionOrder -join '|') -Message 'V3 sections must retain NAT/BGP/ASA/tunnel priority and late BGP summary/neighbor ordering'
+Write-Host '[PASS] V2/V3 sections retain NAT/BGP/ASA/tunnel priority and late BGP summary/neighbor ordering'
 
 Assert-True -Condition $installerText.Contains("[ValidateSet('V2', 'V3')]") -Message 'installer must expose a V2/V3 ValidateSet parameter'
 Assert-True -Condition $installerText.Contains('[string]$KeywordListVersion') -Message 'installer must define -KeywordListVersion'
