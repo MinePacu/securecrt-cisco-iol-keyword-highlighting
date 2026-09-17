@@ -3,12 +3,12 @@
 프로젝트 작업 지침은 루트의 [AGENTS.md](../AGENTS.md)를 먼저 읽습니다. 아래 상태는 2026-09-05 사용자 통합 화면 검증까지 반영했습니다.
 
 ## 사용자 선택과 변경
-사용자는 통합 유지 방식을 선택했습니다. 기본 파일명과 설치 대상은 PNET-Cisco-Dark-V3.ini 그대로이며 V2도 동기화했습니다. ASA와 터널 강조 통합 및 tunnel Key/Keepalive 보강 후 전체 행 수는 489개입니다. 선택형 PNET-Cisco-NAT-V3.ini는 비교용으로 남아 있고 선택/설치를 요구하지 않습니다.
+사용자는 통합 유지 방식을 선택했습니다. 기본 파일명과 설치 대상은 PNET-Cisco-Dark-V3.ini 그대로이며 V2도 동기화했습니다. ASA·터널 통합과 `show crypto isakmp sa`/`show crypto map` 보강 후 현재 소스의 전체 행 수는 508개입니다. 선택형 PNET-Cisco-NAT-V3.ini는 비교용으로 남아 있고 선택/설치를 요구하지 않습니다.
 
 실패했던 DEFINE 및 위치 lookbehind 패턴 대신 화면에서 성공한 Suffix 주소 규칙을 넣었습니다. Pro는 통합 스타일인 흰색으로 복원했고, 네 주소색과 프로토콜색은 그대로입니다. ---는 모든 NAT 주소 규칙 다음에 있습니다.
 
 ## 우선순위 보호
-기존 SHOW_ACCESS_LISTS 블록은 내용 그대로 맨 앞으로 이동했습니다. 다음 NAT_CONTEXT_GUARDS 블록에서 host/network/to/is/from/via/neighbor/Originator:/list: 뒤와 쉼표 뒤 IPv4를 골드로 먼저 강조합니다. 터널 확장에서는 source/destination/Peer:/current_peer/endpt.:/address:/NHS:/nhs 뒤 IPv4, `ip nhrp map` 설정 행 및 DMVPN 상태 표 행도 NAT보다 먼저 보호합니다. 공백도 주소 매칭 범위에 포함될 수 있지만 일반 라벨 자체는 칠하지 않습니다. 그 다음 NAT, BGP 상세, ASA, 터널 전용 블록과 기존 나머지 블록이 이어집니다.
+기존 SHOW_ACCESS_LISTS 블록은 맨 앞에서 `permit`/`deny` 행과 `show crypto map` 내부의 `access-list <name> permit/deny` 행을 우선 처리합니다. 다음 NAT_CONTEXT_GUARDS 블록에서 기존 문맥과 함께 `Peer =` 및 `Current peer:` 뒤 IPv4를 골드로 보호합니다. 따라서 crypto-map peer 주소와 `Crypto map tag: ..., local addr ...`의 끝 주소가 NAT Outside global 보라색으로 오인되지 않습니다. 그 다음 NAT, BGP 상세, ASA, 터널 전용 블록과 기존 나머지 블록이 이어집니다.
 
 자동 우선순위 모델에서 ACL permit/deny, gateway, Connected to, via, Cluster list의 대표 IP 6개가 NAT 색보다 우선 보호됩니다. 보호 규칙은 NAT 정상 샘플을 매칭하지 않습니다. 후속 사용자 통합 화면에서는 ACL permit/deny와 gateway·표시된 경로 IP의 기존 색상 유지까지 확인했습니다. Connected to 및 Cluster list 등의 모든 문맥이 네이티브 검증된 것은 아닙니다.
 
@@ -26,7 +26,7 @@ Suffix는 명령을 인식하지 않습니다. 예를 들어 보호하지 않은
 IPv6, verbose, 줄바꿈, 비정상 주소/포트는 지원을 보장하지 않습니다. 추가 오탐은 실제 원문과 함께 검증해 보호 규칙을 보완해야 합니다.
 
 ## 설치 및 확인
-통합 수정본은 사용자 요청으로 재설치했고, 그 이후 화면에서 위 성공 사례를 확인했습니다. 향후 파일 수정이나 문서 편집 자체가 재설치를 의미하지는 않습니다.
+과거 통합 수정본은 사용자 요청으로 재설치했고, 그 이후 화면에서 위 성공 사례를 확인했습니다. 현재 설치본은 crypto-map tag까지 포함한 494행이며, `show crypto isakmp sa`/`show crypto map` 보강 후 508행 소스는 아직 재설치하지 않았습니다. 최신 변경 후 NAT 화면 회귀 확인도 별도입니다.
 설치 명령은 기존과 동일하게 로컬 수정본을 보존하는 -SkipUpdate를 사용합니다.
 
 ```powershell

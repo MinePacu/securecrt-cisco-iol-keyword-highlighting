@@ -49,6 +49,29 @@ Tunnel-id Local Remote fvrf/ivrf Status
 2 192.0.2.1/500 192.0.2.2/500 (none)/(none) READY
   Status Description: Negotiation done
 There are no IKEv2 SAs
+IPv4 Crypto ISAKMP SA
+dst             src             state          conn-id slot status
+10.165.201.3    10.165.200.225  QM_IDLE              2    0 STDBY
+10.0.0.1        10.0.0.2        QM_IDLE              1    0 ACTIVE
+10.1.0.2        10.1.0.1        MM_KEY_EXCH          3    0
+Crypto Map "mymap" 1 ipsec-isakmp
+        Peer = 209.165.201.1
+        Peer
+        Extended IP access list 102
+            access-list 102 permit ip 192.168.1.0 0.0.0.255 10.0.0.0 0.0.255.255
+        Current peer: 10.0.0.2
+        Security association lifetime: 4608000 kilobytes/3600 seconds
+        PFS (Y/N): N
+        Transform sets=test
+        Transform sets={
+                #$!default_transform_set_1:  { esp-aes esp-sha-hmac  } ,
+        Reverse Route Injection Enabled
+        Interfaces using crypto map mymap:
+! There are no transform sets for the crypto map "mymap."
+  Crypto map tag: CRYPTOMAP, local addr 192.168.12.1
+  local  ident (addr/mask/prot/port): (1.1.1.1/255.255.255.255/0/0)
+  remote ident (addr/mask/prot/port): (3.3.3.3/255.255.255.255/0/0)
+  current_peer 192.168.23.3 port 500
   #pkts encaps: 989, #pkts encrypt: 989, #pkts digest: 989
   #pkts decaps: 989, #pkts decrypt: 989, #pkts verify: 989
   #send errors 0, #recv errors 2
@@ -60,6 +83,13 @@ There are no IKEv2 SAs
   transform: esp-256-aes esp-sha-hmac
   Status: ACTIVE(ACTIVE)
 The active peer described a tunnel state
+Crypto map tag: mentioned in documentation
+local ident (addr/mask/prot/port): unavailable
+current_peer changed port
+Crypto Map "mymap" is described in documentation
+Peer = unknown
+Transform sets are documented here
+MM_KEY_EXCHANGE
 state = ACTIVE
 0 input errors, 0 CRC, 0 frame
 Pro Inside global Inside local Outside local Outside global

@@ -8,7 +8,7 @@
 
 - `TUNNEL_GRE_INTERFACE`: `interface Tunnel`, tunnel source/destination/mode/key/VRF/protection, MTU/MSS/keepalive, `show interfaces Tunnel`의 up/down, GRE transport 및 중립 옵션.
 - `DMVPN_NHRP`: DMVPN/NHRP/NBMA 용어, Hub/Spoke와 dynamic/static 분류, NHS·NBMA·표 머리글 및 `ip nhrp` 설정.
-- `IKE_IPSEC_STATUS`: crypto session, IKEv1 `QM_IDLE ... ACTIVE`, IKEv2 `READY`, IPsec SA 상태·SPI·transform·패킷 및 오류 카운터.
+- `IKE_IPSEC_STATUS`: crypto session, IKEv1/IKEv2/IPsec SA와 `show crypto isakmp sa`, `show crypto map`을 포함합니다. ISAKMP 표와 상태, crypto-map 이름·Peer·ACL·수명·PFS·transform·RRI·적용 인터페이스, IPsec SA의 SPI·패킷·오류 카운터를 강조합니다.
 
 IPv4 routed tunnel을 우선 대상으로 했습니다. `gre ipv6`와 `ipsec ipv6` 모드 문구는 지원하지만 IPv6 endpoint를 역할별로 칠하는 기능은 포함하지 않습니다. VXLAN, MPLS TE, L2TP, CAPWAP, pseudowire 및 ASA 원격접속 VPN은 현재 범위 밖입니다.
 
@@ -30,6 +30,10 @@ IPv4 routed tunnel을 우선 대상으로 했습니다. `gre ipv6`와 `ipsec ipv
 독립적인 소문자 `tunnel`, `active`, `state`, `peer`는 터널 규칙으로 강조하지 않습니다. 상태나 필드 구조가 확인되는 문맥만 사용합니다.
 
 2026-09-17 사용자 화면에서 `show interface tunnel 1`의 `Key 0x64`와 `Keepalive set (1 sec), retries 3`가 기본색으로 남는 것을 확인했습니다. 대문자 `Key`는 같은 행의 sequencing 구조를 확인한 뒤 키 필드만 골드로, 대문자 `Keepalive set ... retries ...`는 전체 행을 하늘색으로 표시하는 규칙을 추가했습니다. 변경 후 네이티브 결과는 아직 확인하지 않았습니다.
+
+같은 날 사용자 제공 `show crypto ipsec sa` 화면에서 색상 대상이 표시된 행을 근거로 세 개의 엄격한 행 규칙(`Crypto map tag`, ident, `current_peer`)을 추가하고, 기존 packet-counter 및 paired crypto endpoint 규칙을 완전한 행도 매칭하도록 확장했습니다. 후속 요청으로 `Crypto map tag:` 라벨만 잡는 정보색 규칙과 바로 뒤 맵 이름을 잡는 골드 규칙을 추가했습니다. 두 규칙 모두 같은 행에 실제 `local addr IPv4` 구조가 뒤따르는지 확인해 일반 설명문의 오탐을 피합니다. `local addr` IPv4는 앞선 NAT 문맥 보호에서 골드로 잡습니다. 변경 후 실제 SecureCRT 화면 확인은 남아 있습니다.
+
+후속 `show crypto isakmp sa`와 `show crypto map` 규칙은 Cisco의 [IOS Security Command Reference](https://www.cisco.com/c/en/us/td/docs/ios-xml/ios/security/s1/sec-s1-cr-book/sec-cr-s3.html)에 실린 실제 출력과 상태 정의를 기준으로 작성했습니다. `QM_IDLE`은 인증된 정상 대기 상태라 초록, `MM_*`/`AG_*`는 협상 단계라 주황, HA `STDBY`는 중립 은색입니다. crypto map의 구조화된 필드는 정보색, map 이름과 peer 주소는 골드, transform 세부는 바이올렛, RRI Enabled는 초록으로 처리합니다. Cisco의 [IKEv1 Site-to-Site 검증 예시](https://www.cisco.com/c/en/us/support/docs/ios-nx-os-software/ios/218432-configure-a-site-to-site-ipsec-ikev1-tun.html)의 IOS XE `QM_IDLE ... ACTIVE` 출력도 fixture 형태와 대조했습니다.
 
 ASA와 IOS가 공유하는 `interface ...`, `#pkts encaps/decaps`, nonzero `#send/#recv errors` 형식은 앞선 ASA 블록이 우선합니다. 통합 색상은 각각 ASA 정보색 `00ffc878`과 주의색 `0066d8ff`를 사용하며, 터널 회귀 검사도 이 우선순위를 확인합니다.
 
@@ -53,7 +57,7 @@ pwsh -NoProfile -File tests/NatTranslations.Tests.ps1
 pwsh -NoProfile -File tests/TunnelingHighlights.Tests.ps1
 ```
 
-`TunnelingHighlights.Tests.ps1`은 두 운영 목록의 17개 GRE/인터페이스 규칙, 9개 DMVPN/NHRP 규칙, 23개 IKE/IPsec 규칙을 확인합니다. Git/PCRE 문법 검사와 .NET 구간·첫 우선 규칙 모델은 SecureCRT 렌더러 검증을 대체하지 않습니다.
+`TunnelingHighlights.Tests.ps1`은 두 운영 목록의 17개 GRE/인터페이스 규칙, 9개 DMVPN/NHRP 규칙, 40개 IKE/IPsec/crypto-map 규칙을 확인합니다. Cisco 공식 출력의 ISAKMP·crypto-map 행, 사용자 화면의 `show crypto ipsec sa` 행, 유사하지만 불완전한 문장의 오탐 방지를 fixture에 포함합니다. Git/PCRE 문법 검사와 .NET 구간·첫 우선 규칙 모델은 SecureCRT 렌더러 검증을 대체하지 않습니다.
 
 `tests/KeywordIni.Tests.ps1`은 터널 변경 전후 모두 기존 BGP `i` 패턴 기대값 불일치에서 중단됩니다. 터널 구현에서는 해당 BGP 규칙을 변경하지 않았습니다.
 
@@ -61,7 +65,7 @@ pwsh -NoProfile -File tests/TunnelingHighlights.Tests.ps1
 
 ## 실제 화면 검증 대기
 
-Key/Keepalive 규칙을 포함한 489행 통합 V3 키워드 파일은 2026-09-17 `-SkipUpdate`로 재설치했습니다. 원본/설치본 SHA256 `47D44956F09F3B316EC647D90D34952338B3E89CBF63418E4F2080DF05C83B5A` 일치, 선언값 `000001E9`, 두 신규 규칙 포함 및 직전 487행 설치본 백업 생성을 확인했습니다. 변경 후 화면 검증은 아직 남아 있습니다. 지원되는 명령만 선택해 다음 순서로 확인합니다.
+crypto-map tag 전용 규칙까지 포함한 494행 통합 V3는 2026-09-17 설치했습니다. 이후 공식 출력 기반 ISAKMP/crypto-map 규칙을 추가한 현재 소스는 508행·`000001FC`이며 아직 재설치하지 않았습니다. 변경 후 화면 검증은 남아 있습니다. 지원되는 명령만 선택해 다음 순서로 확인합니다.
 
 ```text
 show running-config interface Tunnel0
@@ -71,6 +75,7 @@ show dmvpn
 show ip nhrp
 show crypto session detail
 show crypto isakmp sa
+show crypto map
 show crypto ikev2 sa detailed
 show crypto ipsec sa
 ```
@@ -81,7 +86,7 @@ show crypto ipsec sa
 2. source/destination 주소가 NAT 보라색으로 오인되지 않는지.
 3. `key disabled`, `Keepalive not set`, 0 errors가 빨강이 아닌지.
 4. DMVPN UP/DOWN/NHRP 행과 NBMA/NHS 주소.
-5. IKE/IPsec 정상·협상·실패 상태 및 packet/error 카운터.
+5. IKE/IPsec 정상·협상·실패 상태, crypto-map 필드 및 packet/error 카운터.
 6. 기존 NAT, ACL, 라우팅 화면 강조가 유지되는지.
 
 화면 결과를 확보하면 이 문서와 `AGENTS.md`, 관련 README의 검증 상태를 함께 갱신합니다.

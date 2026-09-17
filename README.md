@@ -5,9 +5,9 @@
 이 설정은 다음 특징을 가집니다.
 
 - 대소문자를 구분합니다. 파일의 `D:"Match Case"=00000001` 설정에 해당합니다.
-- SecureCRT의 `Keyword List V2`와 `Keyword List V3` 형식을 제공합니다. 두 목록은 같은 489개 규칙을 사용합니다.
+- SecureCRT의 `Keyword List V2`와 `Keyword List V3` 형식을 제공합니다. 두 목록은 같은 508개 규칙을 사용합니다.
 - `show ip bgp`, `show ip bgp summary`, `show ip bgp neighbors`의 전용 규칙이 generic 상태 규칙보다 먼저 적용되며, neighbor `state = ...` 출력도 강조합니다.
-- GRE 터널 설정·인터페이스 상태, DMVPN/NHRP 및 IKE/IPsec 상태·카운터를 문맥별로 강조합니다.
+- GRE 터널 설정·인터페이스 상태, DMVPN/NHRP, IKE/IPsec 상태·카운터 및 `show crypto isakmp sa`/`show crypto map`을 문맥별로 강조합니다.
 - ASA syslog, 인터페이스, failover/동기화, ASAv 라이선스, NAT/연결, VPN, 리소스·드롭, OSPF 및 인증서 상태를 통합 ASA 블록으로 제공합니다.
 - 정규식 패턴으로 상태 문자열, 숫자, IP 주소, 인터페이스 이름, 프롬프트 등을 하이라이트합니다.
 - 키워드 목록 자체에 설치 스크립트, 자동화 명령, 외부 의존성은 포함하지 않습니다.
@@ -150,7 +150,7 @@ powershell -ExecutionPolicy Bypass -File .\Install-KeywordHighlight.ps1 -ConfigP
 ## 제공 파일
 
 - `PNET-Cisco-Dark.ini`: SecureCRT용 키워드 하이라이트 목록
-- `PNET-Cisco-Dark-V3.ini`: 같은 489개 규칙을 SecureCRT `Keyword List V3` 형식으로 저장한 키워드 하이라이트 목록
+- `PNET-Cisco-Dark-V3.ini`: 같은 508개 규칙을 SecureCRT `Keyword List V3` 형식으로 저장한 키워드 하이라이트 목록
 - `README.md`: 설정 범위, 설치/제거 절차, 적용 시 주의사항 및 그룹/색상 설명
 - `Install-KeywordHighlight.ps1`: Windows용 자동 설치/제거 PowerShell 스크립트
 
@@ -164,7 +164,7 @@ powershell -ExecutionPolicy Bypass -File .\Install-KeywordHighlight.ps1 -ConfigP
 
 SecureCRT가 실행 중이어도 `-Force`로 진행할 수 있지만, SecureCRT가 파일을 다시 저장하면서 변경 내용을 덮어쓸 수 있습니다. 따라서 설치·제거 전에는 SecureCRT를 종료하고, 설치 후에는 SecureCRT를 다시 시작해 저장된 출력 또는 테스트 장비에서 결과를 확인하십시오.
 
-2026-09-15 사용자 제공 화면에서 통합 V3의 ASA failover 역할·상태·동기화, ASAv entitlement/Unlicensed, NAT 정책·hit 카운터, `show xlate`의 `NAT from`, 그리고 `show access-list`의 permit 접두부·양/영 hit 카운터 색상을 확인했습니다. 실제 deny ACL 행과 `TCP PAT`는 그 화면에 없었으므로 해당 사례의 통합 화면 검증은 별도로 남아 있습니다. 2026-09-17 터널 `Key`/`Keepalive set` 규칙을 포함한 489행 V3를 다시 설치했으며, 이 두 신규 규칙의 후속 화면 확인은 아직 남아 있습니다.
+2026-09-15 사용자 제공 화면에서 통합 V3의 ASA failover 역할·상태·동기화, ASAv entitlement/Unlicensed, NAT 정책·hit 카운터, `show xlate`의 `NAT from`, 그리고 `show access-list`의 permit 접두부·양/영 hit 카운터 색상을 확인했습니다. 실제 deny ACL 행과 `TCP PAT`는 그 화면에 없었으므로 해당 사례의 통합 화면 검증은 별도로 남아 있습니다. 2026-09-17 crypto-map tag까지 포함한 494행 V3를 설치했습니다. 이후 공식 Cisco 출력 기반 `show crypto isakmp sa`/`show crypto map` 규칙을 추가해 현재 소스는 508행이며 아직 재설치·화면 확인하지 않았습니다.
 
 ## 색상 코드
 
@@ -244,6 +244,10 @@ INI의 색상값은 일반적인 SecureCRT/Windows `COLORREF` 저장 방식인 `
 `show interfaces Tunnel`의 대문자 출력은 `Key 0x...`를 골드로, `Keepalive set (<n> sec), retries <n>` 전체를 라이트 스카이 블루로 강조합니다. Key 규칙은 같은 행의 `sequencing enabled/disabled` 구조까지 확인해 일반 설명문의 `Key`와 구분합니다.
 
 터널 endpoint와 NBMA 주소, DMVPN 표의 target network가 NAT Suffix 규칙에 의해 Outside global 색으로 오인되지 않도록 `NAT_CONTEXT_GUARDS`가 먼저 보호합니다. `ip nhrp map`과 DMVPN 표 행은 줄 전체 문맥을 사용하고, 일반 문장의 `tunnel`, `active`, `state`, `peer`는 터널 전용 규칙으로 강조하지 않습니다.
+
+`show crypto ipsec sa`에서는 `Crypto map tag`와 local addr, local·remote ident, `current_peer`, encaps/encrypt/digest 및 decaps/decrypt/verify 3중 카운터, local·remote crypto endpoint 행을 문맥 전체로 강조합니다. `Crypto map tag:` 라벨은 정보색, 뒤의 맵 이름은 골드로 별도 강조하며 실제 `local addr IPv4` 구조가 뒤따를 때만 동작합니다. 정상 SA 정보에는 장애 빨강이 아닌 정보색을 사용하며, `local addr`와 peer/endpoint 주소는 NAT 열색 오인보다 앞선 골드 주소 보호를 유지합니다.
+
+Cisco IOS 공식 명령 참조의 출력 형식을 기준으로 `show crypto isakmp sa`의 IPv4/IPv6 제목, 표 머리글, `QM_IDLE`, `MM_*`/`AG_*`, `ACTIVE`/`STDBY`를 강조합니다. `QM_IDLE`은 인증된 정상 대기 상태이므로 초록, 협상 단계는 주황, HA `STDBY`는 장애가 아닌 은색입니다. `show crypto map`은 map 이름과 `ipsec-isakmp`, Peer, Extended IP ACL/check, SA lifetime, PFS, transform set, Reverse Route Injection, 적용 인터페이스를 강조합니다. 내부 `access-list ... permit/deny` 행은 기존 ACL 최우선 블록에서 초록/빨강으로 처리합니다.
 
 자동 검증은 `pwsh -NoProfile -File tests/TunnelingHighlights.Tests.ps1`로 실행합니다. V2/V3 패턴·색상·우선순위, Git/PCRE 문법, .NET 구간, 대표 정상/장애/중립 사례 및 오탐 방지를 확인합니다. 실제 SecureCRT 화면 검증은 아직 수행하지 않았으므로 [터널 강조 상태](docs/Tunneling-Highlighting-Status.md)의 명령별 체크리스트를 사용해 별도로 확인해야 합니다.
 

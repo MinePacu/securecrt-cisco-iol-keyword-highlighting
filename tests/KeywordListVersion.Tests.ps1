@@ -169,8 +169,8 @@ foreach ($fixture in $validatorFixtures) {
 }
 Write-Host '[PASS] V2/V3 fixtures reject internal blank lines and accept the final newline artifact'
 
-Assert-Equal -Actual $v2Rows.Count -Expected 489 -Message 'V2 must retain exactly 489 keyword rows'
-Assert-Equal -Actual $v3Rows.Count -Expected 489 -Message 'V3 must retain exactly 489 keyword rows'
+Assert-Equal -Actual $v2Rows.Count -Expected 508 -Message 'V2 must retain exactly 508 keyword rows'
+Assert-Equal -Actual $v3Rows.Count -Expected 508 -Message 'V3 must retain exactly 508 keyword rows'
 
 $v2CountMatch = [System.Text.RegularExpressions.Regex]::Match(
     $v2Text,

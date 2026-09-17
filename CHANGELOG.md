@@ -4,6 +4,23 @@
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-09-18
+
+### Added
+
+- Added context-anchored IOS `show crypto ipsec sa` highlighting for crypto-map/local-address, local/remote identity, and current-peer rows based on a user-provided output image. / 사용자 제공 출력 화면을 근거로 crypto map/local addr, local·remote ident, current peer 행 전용 강조를 추가했습니다.
+- Added short context-checked rules that highlight the `Crypto map tag:` label in the information color and its map-name value in gold without matching prose that merely mentions the label. / 실제 local addr 구조가 뒤따를 때만 crypto-map 라벨과 맵 이름을 각각 정보색·골드로 강조합니다.
+- Added Cisco-official-output-based highlighting for `show crypto isakmp sa` and `show crypto map`, covering table headers, IKEv1 states, HA standby, map identity/protocol, peers, crypto ACLs, SA lifetime, PFS, transform sets, RRI, and applied interfaces. / Cisco 공식 출력에 근거한 ISAKMP SA 및 crypto map 강조를 추가했습니다.
+
+### Changed
+
+- Expanded IPsec and crypto-map peer address guards and added priority ACL handling for `access-list <name> permit/deny` rows embedded in `show crypto map`. V2/V3 now contain 508 synchronized rows with declaration `000001FC`. / crypto map 내부 peer 주소와 ACL 행의 우선순위를 보호하고 두 운영 목록을 508행으로 동기화했습니다.
+
+### Validation and known limitations
+
+- Keyword-list version, NAT, preserved ASA, integrated ASA, and tunneling regression checks pass for both V2 and V3. The installed file remains the prior 494-row V3 (`000001EE`, SHA256 `B93D028BED88EE756134558A01F692440FC1B06F92A1C0B767D974BD6816310B`); the new 508-row source has not yet been reinstalled or screen-verified.
+- The repaired `KeywordIni.Tests.ps1` runs through its earlier truncated section and retains the documented BGP `i` expectation mismatch. `DefaultIni.Tests.ps1` and `InstallerUpdate.Tests.ps1` retain their pre-existing unrelated failures.
+
 ## [1.1.0] - 2026-09-17
 
 ### Added

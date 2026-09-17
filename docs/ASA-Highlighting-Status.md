@@ -1,10 +1,10 @@
 # ASA 통합 강조 상태
 
-이 문서는 2026-09-17 루트 운영 INI 통합 상태를 기록합니다. 원본 ASA 설계·전용 목록·회귀 자료는 `asa`와 `tests/AsaKeywordLists.Tests.ps1`에 보존되어 있습니다.
+이 문서는 2026-09-17 루트 운영 INI 통합 상태를 기록합니다. 원본 ASA 설계·전용 목록·회귀 자료는 `dist/upstream-main/asa`와 `dist/upstream-main/tests/AsaKeywordLists.Tests.ps1`에 보존되어 있습니다.
 
 ## 통합 내용
 
-ASA Extended 목록의 64개 항목 중 별도 목록 전용 default-color fallback을 제외한 63개 정규식을 V2/V3의 `ASA_FIREWALL_OPERATIONAL_STATES` 블록에 패턴·색상·순서 그대로 병합했습니다. tunnel Key/Keepalive 보강 후 두 운영 목록은 489개 행이며 선언값은 `000001E9`입니다. ASA 블록 자체는 변경하지 않았습니다.
+ASA Extended 목록의 64개 항목 중 별도 목록 전용 default-color fallback을 제외한 63개 정규식을 V2/V3의 `ASA_FIREWALL_OPERATIONAL_STATES` 블록에 패턴·색상·순서 그대로 병합했습니다. 후속 IOS `show crypto isakmp sa`/`show crypto map` 보강 후 두 운영 소스 목록은 508개 행이며 선언값은 `000001FC`입니다. ASA 블록 자체는 변경하지 않았습니다.
 
 블록 순서는 다음과 같습니다.
 
@@ -44,7 +44,7 @@ pwsh -NoProfile -File tests/TunnelingHighlights.Tests.ps1
 
 ASA 검사는 보존된 Core 46개·Extended 64개 구조, Core 부분집합, 62개 출력 양성/음성 사례, fallback을 제외한 63개 통합 규칙의 V2/V3 일치, PCRE 문법 및 우선순위를 확인합니다.
 
-과거 ASA 통합본에서는 사용자 화면으로 failover Primary/Secondary·Active/Standby Ready·Sync Done, historical `Ifc Failure`/`inside: Failed`의 기본색 유지, ASAv entitlement/Unlicensed 경고, NAT 정책·hit 카운터, `show xlate`의 `NAT from`, ASA ACL permit 및 0/양수 hitcnt를 확인했습니다. 실제 deny ACL 행과 `TCP PAT` 행은 그 화면에 없었습니다. tunnel Key/Keepalive 규칙이 추가된 489행 ASA+터널 통합 V3는 2026-09-17 `-SkipUpdate`로 재설치했고 원본/설치본 SHA256 일치, 선언값 `000001E9`을 확인했습니다. 현재 설치본의 후속 화면 확인 전에는 현재 파일 전체의 네이티브 검증 완료로 확대하지 않습니다.
+과거 ASA 통합본에서는 사용자 화면으로 failover Primary/Secondary·Active/Standby Ready·Sync Done, historical `Ifc Failure`/`inside: Failed`의 기본색 유지, ASAv entitlement/Unlicensed 경고, NAT 정책·hit 카운터, `show xlate`의 `NAT from`, ASA ACL permit 및 0/양수 hitcnt를 확인했습니다. 실제 deny ACL 행과 `TCP PAT` 행은 그 화면에 없었습니다. 현재 설치본은 494행·`000001EE`이며, IOS crypto show 명령을 보강한 508행·`000001FC` 소스는 아직 재설치하지 않았습니다. 최신 파일 전체의 네이티브 검증 완료로 확대하지 않습니다.
 
 ## 후속 화면 확인
 

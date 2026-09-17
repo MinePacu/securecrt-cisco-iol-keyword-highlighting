@@ -44,7 +44,7 @@ function Get-FirstCoveringRule($Rules, [string]$Text, [string]$Token) {
 $sectionCounts = @{
     TUNNEL_GRE_INTERFACE = 17
     DMVPN_NHRP = 9
-    IKE_IPSEC_STATUS = 23
+    IKE_IPSEC_STATUS = 40
 }
 
 $cases = @(
@@ -74,13 +74,48 @@ $cases = @(
     @{ Text = '192.0.2.2       192.0.2.1       QM_IDLE           2003 ACTIVE'; Token = 'QM_IDLE           2003 ACTIVE'; Color = '0032CD32'; Section = 'IKE_IPSEC_STATUS' }
     @{ Text = '2 192.0.2.1/500 192.0.2.2/500 (none)/(none) READY'; Token = 'READY'; Color = '0032CD32'; Section = 'IKE_IPSEC_STATUS' }
     @{ Text = 'There are no IKEv2 SAs'; Token = 'There are no'; Color = '00C0C0C0'; Section = 'IKE_IPSEC_STATUS' }
+    @{ Text = 'IPv4 Crypto ISAKMP SA'; Token = 'IPv4 Crypto ISAKMP SA'; Color = '00B469FF'; Section = 'IKE_IPSEC_STATUS' }
+    @{ Text = 'dst             src             state          conn-id slot status'; Token = 'dst             src             state          conn-id slot status'; Color = '00FACE87'; Section = 'IKE_IPSEC_STATUS' }
+    @{ Text = '10.165.201.3    10.165.200.225  QM_IDLE              2    0 STDBY'; Token = 'QM_IDLE'; Color = '0032CD32'; Section = 'IKE_IPSEC_STATUS' }
+    @{ Text = '10.165.201.3    10.165.200.225  QM_IDLE              2    0 STDBY'; Token = 'STDBY'; Color = '00C0C0C0'; Section = 'IKE_IPSEC_STATUS' }
+    @{ Text = '10.0.0.1        10.0.0.2        QM_IDLE              1    0 ACTIVE'; Token = 'QM_IDLE'; Color = '0032CD32'; Section = 'IKE_IPSEC_STATUS' }
+    @{ Text = '10.1.0.2        10.1.0.1        MM_KEY_EXCH          3    0'; Token = 'MM_KEY_EXCH'; Color = '0000A5FF'; Section = 'IKE_IPSEC_STATUS' }
+    @{ Text = 'Crypto Map "mymap" 1 ipsec-isakmp'; Token = 'Crypto Map'; Color = '00FACE87'; Section = 'IKE_IPSEC_STATUS' }
+    @{ Text = 'Crypto Map "mymap" 1 ipsec-isakmp'; Token = 'mymap'; Color = '0000D7FF'; Section = 'IKE_IPSEC_STATUS' }
+    @{ Text = 'Crypto Map "mymap" 1 ipsec-isakmp'; Token = 'ipsec-isakmp'; Color = '00B469FF'; Section = 'IKE_IPSEC_STATUS' }
+    @{ Text = '        Peer = 209.165.201.1'; Token = 'Peer = 209.165.201.1'; Color = '00FACE87'; Section = 'IKE_IPSEC_STATUS' }
+    @{ Text = '        Peer = 209.165.201.1'; Token = '209.165.201.1'; Color = '0000D7FF'; Section = 'NAT_CONTEXT_GUARDS' }
+    @{ Text = '        Peer'; Token = 'Peer'; Color = '00FACE87'; Section = 'IKE_IPSEC_STATUS' }
+    @{ Text = '        Extended IP access list 102'; Token = 'Extended IP access list 102'; Color = '00FFFFFF'; Section = 'SHOW_ACCESS_LISTS' }
+    @{ Text = '            access-list 102 permit ip 192.168.1.0 0.0.0.255 10.0.0.0 0.0.255.255'; Token = 'access-list 102 permit ip 192.168.1.0 0.0.0.255 10.0.0.0 0.0.255.255'; Color = '0032CD32'; Section = 'SHOW_ACCESS_LISTS' }
+    @{ Text = '        Current peer: 10.0.0.2'; Token = 'Current peer: 10.0.0.2'; Color = '00FACE87'; Section = 'IKE_IPSEC_STATUS' }
+    @{ Text = '        Current peer: 10.0.0.2'; Token = '10.0.0.2'; Color = '0000D7FF'; Section = 'NAT_CONTEXT_GUARDS' }
+    @{ Text = '        Security association lifetime: 4608000 kilobytes/3600 seconds'; Token = 'Security association lifetime: 4608000 kilobytes/3600 seconds'; Color = '00FACE87'; Section = 'IKE_IPSEC_STATUS' }
+    @{ Text = '        PFS (Y/N): N'; Token = 'PFS (Y/N): N'; Color = '00FACE87'; Section = 'IKE_IPSEC_STATUS' }
+    @{ Text = '        Transform sets=test'; Token = 'Transform sets=test'; Color = '00FACE87'; Section = 'IKE_IPSEC_STATUS' }
+    @{ Text = '        Transform sets={'; Token = 'Transform sets={'; Color = '00FACE87'; Section = 'IKE_IPSEC_STATUS' }
+    @{ Text = '                #$!default_transform_set_1:  { esp-aes esp-sha-hmac  } ,'; Token = '#$!default_transform_set_1:  { esp-aes esp-sha-hmac  } ,'; Color = '00EE82EE'; Section = 'IKE_IPSEC_STATUS' }
+    @{ Text = '        Reverse Route Injection Enabled'; Token = 'Reverse Route Injection Enabled'; Color = '0032CD32'; Section = 'IKE_IPSEC_STATUS' }
+    @{ Text = '        Interfaces using crypto map mymap:'; Token = 'Interfaces using crypto map mymap:'; Color = '00FACE87'; Section = 'IKE_IPSEC_STATUS' }
+    @{ Text = '! There are no transform sets for the crypto map "mymap."'; Token = '! There are no transform sets for the crypto map "mymap."'; Color = '0000A5FF'; Section = 'IKE_IPSEC_STATUS' }
+    @{ Text = '  Crypto map tag: CRYPTOMAP, local addr 192.168.12.1'; Token = 'Crypto map tag: CRYPTOMAP, local addr 192.168.12.1'; Color = '00FACE87'; Section = 'IKE_IPSEC_STATUS' }
+    @{ Text = '  Crypto map tag: CRYPTOMAP, local addr 192.168.12.1'; Token = 'Crypto map tag:'; Color = '00FACE87'; Section = 'IKE_IPSEC_STATUS' }
+    @{ Text = '  Crypto map tag: CRYPTOMAP, local addr 192.168.12.1'; Token = 'CRYPTOMAP'; Color = '0000D7FF'; Section = 'IKE_IPSEC_STATUS' }
+    @{ Text = '  Crypto map tag: CRYPTOMAP, local addr 192.168.12.1'; Token = '192.168.12.1'; Color = '0000D7FF'; Section = 'NAT_CONTEXT_GUARDS' }
+    @{ Text = '  local  ident (addr/mask/prot/port): (1.1.1.1/255.255.255.255/0/0)'; Token = 'local  ident (addr/mask/prot/port): (1.1.1.1/255.255.255.255/0/0)'; Color = '00FACE87'; Section = 'IKE_IPSEC_STATUS' }
+    @{ Text = '  remote ident (addr/mask/prot/port): (3.3.3.3/255.255.255.255/0/0)'; Token = 'remote ident (addr/mask/prot/port): (3.3.3.3/255.255.255.255/0/0)'; Color = '00FACE87'; Section = 'IKE_IPSEC_STATUS' }
+    @{ Text = '  current_peer 192.168.23.3 port 500'; Token = 'current_peer 192.168.23.3 port 500'; Color = '00FACE87'; Section = 'IKE_IPSEC_STATUS' }
+    @{ Text = '  current_peer 192.168.23.3 port 500'; Token = '192.168.23.3'; Color = '0000D7FF'; Section = 'NAT_CONTEXT_GUARDS' }
     @{ Text = '  #pkts encaps: 989, #pkts encrypt: 989, #pkts digest: 989'; Token = '#pkts encaps: 989'; Color = '00ffc878'; Section = 'ASA_FIREWALL_OPERATIONAL_STATES' }
+    @{ Text = '  #pkts encaps: 989, #pkts encrypt: 989, #pkts digest: 989'; Token = '#pkts encaps: 989, #pkts encrypt: 989, #pkts digest: 989'; Color = '00ffc878'; Section = 'IKE_IPSEC_STATUS' }
+    @{ Text = '  #pkts decaps: 989, #pkts decrypt: 989, #pkts verify: 989'; Token = '#pkts decaps: 989, #pkts decrypt: 989, #pkts verify: 989'; Color = '00ffc878'; Section = 'IKE_IPSEC_STATUS' }
     @{ Text = '  #send errors 0, #recv errors 2'; Token = '#send errors 0'; Color = '00C0C0C0'; Section = 'IKE_IPSEC_STATUS' }
     @{ Text = '  #send errors 0, #recv errors 2'; Token = '#recv errors 2'; Color = '0066d8ff'; Section = 'ASA_FIREWALL_OPERATIONAL_STATES' }
     @{ Text = '  current outbound spi: 0x9B592959'; Token = 'current outbound spi: 0x9B592959'; Color = '0000D7FF'; Section = 'IKE_IPSEC_STATUS' }
     @{ Text = '  SA State: active'; Token = 'SA State: active'; Color = '0032CD32'; Section = 'IKE_IPSEC_STATUS' }
     @{ Text = '  SA State: inactive'; Token = 'SA State: inactive'; Color = '000000FF'; Section = 'IKE_IPSEC_STATUS' }
     @{ Text = '  Status: ACTIVE(ACTIVE)'; Token = 'Status: ACTIVE(ACTIVE)'; Color = '0032CD32'; Section = 'IKE_IPSEC_STATUS' }
+    @{ Text = '  local crypto endpt.: 192.0.2.1, remote crypto endpt.: 192.0.2.2'; Token = 'local crypto endpt.: 192.0.2.1, remote crypto endpt.: 192.0.2.2'; Color = '00FACE87'; Section = 'IKE_IPSEC_STATUS' }
 )
 
 foreach ($version in @('V2', 'V3')) {
@@ -109,6 +144,13 @@ foreach ($version in @('V2', 'V3')) {
         'The active peer described a tunnel state',
         'Encryption Key 0x64, sequencing active',
         'Keepalive set for routing neighbors',
+        'Crypto map tag: mentioned in documentation',
+        'local ident (addr/mask/prot/port): unavailable',
+        'current_peer changed port',
+        'Crypto Map "mymap" is described in documentation',
+        'Peer = unknown',
+        'Transform sets are documented here',
+        'MM_KEY_EXCHANGE',
         'state = ACTIVE',
         '0 input errors, 0 CRC, 0 frame'
     )) {

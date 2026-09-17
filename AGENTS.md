@@ -6,10 +6,11 @@
 
 - 사용자는 **NAT 전용 목록으로 전환하지 않고 통합 목록을 유지**하기로 결정했다. 새 요청 없이 별도 목록 선택을 운영 해결책으로 다시 제안하지 않는다.
 - 운영 파일은 `PNET-Cisco-Dark.ini`(V2), `PNET-Cisco-Dark-V3.ini`(V3)이다. 기본 설치 대상은 V3다. `PNET-Cisco-NAT-V3.ini`와 `tests/NAT-*Probe*.ini`는 비교/진단 자료이며 기본 설치 대상으로 바꾸지 않는다.
-- 현재 두 운영 목록은 489개 행, 선언값 `000001E9`이다. 행 수를 바꾸면 선언값·V2/V3 대응·테스트·README를 함께 갱신한다. 이 수치는 영구 제한이 아니라 현재 기준이다.
+- 현재 두 운영 목록은 508개 행, 선언값 `000001FC`이다. 행 수를 바꾸면 선언값·V2/V3 대응·테스트·README를 함께 갱신한다. 이 수치는 영구 제한이 아니라 현재 기준이다.
 - 통합 V3를 재설치한 뒤 사용자 화면에서 NAT, ACL, 일부 라우팅 출력이 정상인 것을 확인했다. 이미 확인한 사례를 다시 처음부터 진단하지 않는다.
-- GRE·DMVPN/NHRP·IKE/IPsec 규칙은 자동 검사를 통과했다. 후속 사용자 화면에서 `show interface tunnel`의 `Key 0x64`와 `Keepalive set (1 sec), retries 3`가 기본색으로 남는 것을 확인해 두 전용 규칙을 추가했고, 2026-09-17 현재 489행 V3를 `-SkipUpdate`로 재설치했다. 원본/설치본 SHA256 일치와 두 신규 규칙 포함을 확인했지만 변경 후 화면 검증은 남아 있다.
-- `asa`의 ASA Extended 63개 정규식은 `ASA_FIREWALL_OPERATIONAL_STATES`로 두 운영 목록에 그대로 병합했다. 이 ASA 규칙은 과거 432행 통합 목록에서 일부 실제 화면 검증 증거가 있다. 현재 489행 ASA+터널 설치본은 원본과 일치하며, 직전 487행 설치본은 timestamp 백업으로 보존됐다.
+- GRE·DMVPN/NHRP·IKE/IPsec 규칙은 자동 검사를 통과했다. 사용자 제공 `show crypto ipsec sa` 화면을 근거로 관련 행과 crypto-map tag를 보강한 뒤, Cisco 공식 명령 참조의 실제 출력에 근거해 `show crypto isakmp sa` 및 `show crypto map` 규칙을 추가하여 소스는 508행이 됐다. ISAKMP의 `QM_IDLE`은 초록, `MM_*`/`AG_*` 협상 상태는 주황, `STDBY`는 중립 은색이다. crypto map은 이름·프로토콜·Peer·ACL·SA lifetime·PFS·transform set·RRI·적용 인터페이스를 강조한다. 현재 설치본은 직전 494행(`000001EE`, SHA256 `B93D028BED88EE756134558A01F692440FC1B06F92A1C0B767D974BD6816310B`)이고 508행 변경본은 아직 재설치·화면 검증하지 않았다.
+- `dist/upstream-main`의 ASA Extended 63개 정규식은 `ASA_FIREWALL_OPERATIONAL_STATES`로 두 운영 목록에 그대로 병합했다. 이 ASA 규칙은 과거 432행 통합 목록에서 일부 실제 화면 검증 증거가 있다. 현재 소스는 508행이고 설치본은 494행이다. 직전 492행 설치본은 `PNET-Cisco-Dark-V3.ini.bak-20260917-171814089`으로 보존됐다.
+- 이 통합 상태는 2026-09-18 정식 `v1.2.0` 릴리즈로 `main`에 게시했다. 이후 변경은 다시 `Unreleased`에 기록한다.
 
 ## 실제 화면에서 확인한 범위
 
@@ -40,9 +41,9 @@ NAT는 주소 토큰에서 매칭을 시작하고 lookahead로 뒤에 남은 end
 
 문맥 보호는 `host/network/to/is/from/via/neighbor/Originator:/list:` 뒤 또는 쉼표 뒤 IPv4에 적용한다. 보호 조건 변경 시 NAT 정상 행을 먼저 매칭해 버리지 않는지 검사한다. 기존 BGP 경로 값 규칙의 next-hop 뒤 숫자 metric 조건도 유지한다. 이를 느슨하게 하면 정적 NAT 주소 행과 충돌할 수 있다.
 
-터널 확장 보호는 `source/destination/Peer:/current_peer/endpt.:/address:/NHS:/nhs` 뒤 IPv4, `ip nhrp map` 설정 행, DMVPN `UP/DOWN/NHRP` 표 행에 적용한다. DMVPN 표 행은 줄 끝 target network가 NAT Outside global 색으로 오인되지 않도록 상태별 행 색을 우선 적용한다. `key disabled`, `Keepalive not set`, 0 errors, SA 없음은 그 자체로 장애가 아니므로 중립색을 유지한다.
+터널 확장 보호는 `source/destination/Peer:/Peer =/Current peer:/current_peer/local addr/endpt.:/address:/NHS:/nhs` 뒤 IPv4, `ip nhrp map` 설정 행, DMVPN `UP/DOWN/NHRP` 표 행에 적용한다. DMVPN 표 행은 줄 끝 target network가 NAT Outside global 색으로 오인되지 않도록 상태별 행 색을 우선 적용한다. `key disabled`, `Keepalive not set`, 0 errors, SA 없음 및 `STDBY`는 그 자체로 장애가 아니므로 중립색을 유지한다.
 
-ASA 블록은 보존된 `asa/ASA-SecureCRT-v1-Extended.ini`의 default-color fallback을 제외한 63개 정규식과 패턴·색상·순서가 같아야 한다. 공통 형식인 `interface ...`, IPsec `#pkts encaps/decaps`, nonzero `#send/#recv errors`는 ASA 블록이 일반 터널 블록보다 먼저 적용되어 ASA 정보색/주의색을 사용한다.
+ASA 블록은 보존된 `dist/upstream-main/asa/ASA-SecureCRT-v1-Extended.ini`의 default-color fallback을 제외한 63개 정규식과 패턴·색상·순서가 같아야 한다. 공통 형식인 `interface ...`, IPsec `#pkts encaps/decaps`, nonzero `#send/#recv errors`는 ASA 블록이 일반 터널 블록보다 먼저 적용되어 ASA 정보색/주의색을 사용한다.
 
 ## 실패한 탐색을 반복하지 말 것
 
@@ -78,7 +79,7 @@ pwsh -NoProfile -File tests/KeywordIni.Tests.ps1
 ```
 
 - 앞의 두 검사는 현재 통과 기준이다. NAT 검사는 버전별 정상 70개 구간/색상, 후보 시작 위치, 6개 문맥 보호 사례 등을 확인한다.
-- `TunnelingHighlights.Tests.ps1`은 V2/V3의 GRE·터널 인터페이스·DMVPN/NHRP·IKE/IPsec 구간, NAT보다 앞선 주소/행 보호, 중립 상태 및 대표 오탐 방지를 확인하며 현재 통과한다.
+- `TunnelingHighlights.Tests.ps1`은 V2/V3의 GRE·터널 인터페이스·DMVPN/NHRP·IKE/IPsec 구간(사진의 `show crypto ipsec sa` 행 포함), NAT보다 앞선 주소/행 보호, 중립 상태 및 대표 오탐 방지를 확인하며 현재 통과한다.
 - `AsaFirewallHighlights.Tests.ps1`은 보존된 Core 46/Extended 64개 목록, 62개 ASA 출력 사례, fallback을 제외한 Extended 63개 규칙의 V2/V3 통합 일치 및 BGP → ASA → 터널 → 범용 상태 순서를 확인하며 현재 통과한다.
 - `KeywordIni.Tests.ps1`은 마지막 실행에서 기존 BGP `i` 패턴 기대값 불일치로 중단됐다. 테스트는 `|\x20+-\x20+internal\b` 대안을 기대하지만 실제 규칙에는 없다. NAT 및 터널 통합 작업에서 해당 BGP 규칙은 변경하지 않았다. 새 회귀와 구분하되 영구 무시/무조건 성공 처리하지 않는다. 고칠 경우 별도 근거와 BGP 검증이 필요하다.
 - 추가 전체 검사에서 `DefaultIni.Tests.ps1`은 앞선 5개 검사를 통과한 뒤 PowerShell 내장 읽기 전용 `$IsWindows` 변수에 값을 쓰는 line 236에서 중단됐고, `InstallerUpdate.Tests.ps1`은 설치기의 in-progress flag 문자열 기대 불일치로 중단됐다. 터널 작업은 두 테스트 및 설치기 코드를 변경하지 않았으므로 터널 회귀와 구분하되 별도 수정 전까지 성공으로 보고하지 않는다.
