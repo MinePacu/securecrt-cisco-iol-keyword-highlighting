@@ -169,8 +169,8 @@ foreach ($fixture in $validatorFixtures) {
 }
 Write-Host '[PASS] V2/V3 fixtures reject internal blank lines and accept the final newline artifact'
 
-Assert-Equal -Actual $v2Rows.Count -Expected 508 -Message 'V2 must retain exactly 508 keyword rows'
-Assert-Equal -Actual $v3Rows.Count -Expected 508 -Message 'V3 must retain exactly 508 keyword rows'
+Assert-Equal -Actual $v2Rows.Count -Expected 515 -Message 'V2 must retain exactly 515 keyword rows'
+Assert-Equal -Actual $v3Rows.Count -Expected 515 -Message 'V3 must retain exactly 515 keyword rows'
 
 $v2CountMatch = [System.Text.RegularExpressions.Regex]::Match(
     $v2Text,
@@ -215,6 +215,7 @@ $expectedSectionOrder = @(
     'NAT_CONTEXT_GUARDS',
     'SHOW_IP_NAT_TRANSLATIONS',
     'BGP_SHOW_IP',
+    'IOS_SHOW_IP_INTERFACE_BRIEF',
     'ASA_FIREWALL_OPERATIONAL_STATES',
     'TUNNEL_GRE_INTERFACE',
     'DMVPN_NHRP',
@@ -245,9 +246,9 @@ $expectedSectionOrder = @(
     'BGP_SHOW_IP_NEIGHBORS',
     'PROMPTS'
 )
-Assert-Equal -Actual ((Get-SectionOrder -Lines $v2Lines) -join '|') -Expected ($expectedSectionOrder -join '|') -Message 'V2 sections must retain NAT/BGP/ASA/tunnel priority and late BGP summary/neighbor ordering'
-Assert-Equal -Actual ((Get-SectionOrder -Lines $v3Lines) -join '|') -Expected ($expectedSectionOrder -join '|') -Message 'V3 sections must retain NAT/BGP/ASA/tunnel priority and late BGP summary/neighbor ordering'
-Write-Host '[PASS] V2/V3 sections retain NAT/BGP/ASA/tunnel priority and late BGP summary/neighbor ordering'
+Assert-Equal -Actual ((Get-SectionOrder -Lines $v2Lines) -join '|') -Expected ($expectedSectionOrder -join '|') -Message 'V2 sections must retain NAT/BGP/interface-brief/ASA/tunnel priority and late BGP summary/neighbor ordering'
+Assert-Equal -Actual ((Get-SectionOrder -Lines $v3Lines) -join '|') -Expected ($expectedSectionOrder -join '|') -Message 'V3 sections must retain NAT/BGP/interface-brief/ASA/tunnel priority and late BGP summary/neighbor ordering'
+Write-Host '[PASS] V2/V3 sections retain NAT/BGP/interface-brief/ASA/tunnel priority and late BGP summary/neighbor ordering'
 
 Assert-True -Condition $installerText.Contains("[ValidateSet('V2', 'V3')]") -Message 'installer must expose a V2/V3 ValidateSet parameter'
 Assert-True -Condition $installerText.Contains('[string]$KeywordListVersion') -Message 'installer must define -KeywordListVersion'

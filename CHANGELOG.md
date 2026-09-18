@@ -4,6 +4,16 @@
 
 ## [Unreleased]
 
+## [1.2.1] - 2026-09-18
+
+### Fixed
+
+- Restored the pre-ASA token colors for IOS `show ip interface brief` rows by protecting interface names, assigned addresses, neutral fields, and up/down states before the preserved ASA whole-row matchers. V2/V3 now contain 515 synchronized rows with declaration `00000203`. / ASA 전체 행 규칙이 IOS 인터페이스 요약 행 전체를 초록·회색으로 덮던 충돌을 막고 인터페이스·주소·기본 필드·상태의 기존 토큰 색상을 복원했습니다.
+
+### Validation and known limitations
+
+- `InterfaceBriefHighlights.Tests.ps1` verifies the restored token colors and priority for V2/V3. IOS and ASA brief rows have the same line format, so the integrated list applies the tokenized style to both. The 515-row V3 was reinstalled with `-SkipUpdate`; source/installed SHA256 match, while screen verification remains pending.
+
 ## [1.2.0] - 2026-09-18
 
 ### Added

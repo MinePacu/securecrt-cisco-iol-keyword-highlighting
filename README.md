@@ -5,7 +5,7 @@
 이 설정은 다음 특징을 가집니다.
 
 - 대소문자를 구분합니다. 파일의 `D:"Match Case"=00000001` 설정에 해당합니다.
-- SecureCRT의 `Keyword List V2`와 `Keyword List V3` 형식을 제공합니다. 두 목록은 같은 508개 규칙을 사용합니다.
+- SecureCRT의 `Keyword List V2`와 `Keyword List V3` 형식을 제공합니다. 두 목록은 같은 515개 규칙을 사용합니다.
 - `show ip bgp`, `show ip bgp summary`, `show ip bgp neighbors`의 전용 규칙이 generic 상태 규칙보다 먼저 적용되며, neighbor `state = ...` 출력도 강조합니다.
 - GRE 터널 설정·인터페이스 상태, DMVPN/NHRP, IKE/IPsec 상태·카운터 및 `show crypto isakmp sa`/`show crypto map`을 문맥별로 강조합니다.
 - ASA syslog, 인터페이스, failover/동기화, ASAv 라이선스, NAT/연결, VPN, 리소스·드롭, OSPF 및 인증서 상태를 통합 ASA 블록으로 제공합니다.
@@ -150,7 +150,7 @@ powershell -ExecutionPolicy Bypass -File .\Install-KeywordHighlight.ps1 -ConfigP
 ## 제공 파일
 
 - `PNET-Cisco-Dark.ini`: SecureCRT용 키워드 하이라이트 목록
-- `PNET-Cisco-Dark-V3.ini`: 같은 508개 규칙을 SecureCRT `Keyword List V3` 형식으로 저장한 키워드 하이라이트 목록
+- `PNET-Cisco-Dark-V3.ini`: 같은 515개 규칙을 SecureCRT `Keyword List V3` 형식으로 저장한 키워드 하이라이트 목록
 - `README.md`: 설정 범위, 설치/제거 절차, 적용 시 주의사항 및 그룹/색상 설명
 - `Install-KeywordHighlight.ps1`: Windows용 자동 설치/제거 PowerShell 스크립트
 
@@ -164,7 +164,7 @@ powershell -ExecutionPolicy Bypass -File .\Install-KeywordHighlight.ps1 -ConfigP
 
 SecureCRT가 실행 중이어도 `-Force`로 진행할 수 있지만, SecureCRT가 파일을 다시 저장하면서 변경 내용을 덮어쓸 수 있습니다. 따라서 설치·제거 전에는 SecureCRT를 종료하고, 설치 후에는 SecureCRT를 다시 시작해 저장된 출력 또는 테스트 장비에서 결과를 확인하십시오.
 
-2026-09-15 사용자 제공 화면에서 통합 V3의 ASA failover 역할·상태·동기화, ASAv entitlement/Unlicensed, NAT 정책·hit 카운터, `show xlate`의 `NAT from`, 그리고 `show access-list`의 permit 접두부·양/영 hit 카운터 색상을 확인했습니다. 실제 deny ACL 행과 `TCP PAT`는 그 화면에 없었으므로 해당 사례의 통합 화면 검증은 별도로 남아 있습니다. 2026-09-17 crypto-map tag까지 포함한 494행 V3를 설치했습니다. 이후 공식 Cisco 출력 기반 `show crypto isakmp sa`/`show crypto map` 규칙을 추가해 현재 소스는 508행이며 아직 재설치·화면 확인하지 않았습니다.
+2026-09-15 사용자 제공 화면에서 통합 V3의 ASA failover 역할·상태·동기화, ASAv entitlement/Unlicensed, NAT 정책·hit 카운터, `show xlate`의 `NAT from`, 그리고 `show access-list`의 permit 접두부·양/영 hit 카운터 색상을 확인했습니다. 실제 deny ACL 행과 `TCP PAT`는 그 화면에 없었으므로 해당 사례의 통합 화면 검증은 별도로 남아 있습니다. 공식 Cisco 출력 기반 `show crypto isakmp sa`/`show crypto map` 규칙과 IOS `show ip interface brief` 토큰 보호를 포함한 515행 V3를 2026-09-18 재설치했으며 소스/설치본 SHA256 일치를 확인했습니다. 변경 후 SecureCRT 화면 확인은 남아 있습니다.
 
 ## 색상 코드
 
@@ -197,6 +197,7 @@ INI의 색상값은 일반적인 SecureCRT/Windows `COLORREF` 저장 방식인 `
 | 그룹 | 강조 대상 |
 |---|---|
 | `SHOW_IP_NAT_TRANSLATIONS` | 기본 NAT 변환 테이블의 프로토콜, 네 주소 열과 포트·ICMP 식별자, `---` |
+| `IOS_SHOW_IP_INTERFACE_BRIEF` | ASA 전체 행 규칙보다 먼저 IOS/ASA 공통 brief 행의 인터페이스·주소·기본 필드·up/down 토큰을 기존 색상으로 보호 |
 | `ASA_FIREWALL_OPERATIONAL_STATES` | ASA syslog, 인터페이스, failover/HA, 라이선스, SLA/AAA, VPN/ACL/NAT, 자원·drop·OSPF·인증서 상태 |
 | `TUNNEL_GRE_INTERFACE` | `interface Tunnel`, source/destination/mode/protection 설정, `show interfaces Tunnel`의 상태·GRE transport·중립 옵션 |
 | `DMVPN_NHRP` | `show dmvpn`, `show ip nhrp`, NBMA/NHS·Hub/Spoke·NHRP 설정 및 상태 표 |
@@ -253,11 +254,11 @@ Cisco IOS 공식 명령 참조의 출력 형식을 기준으로 `show crypto isa
 
 ### ASA 통합 강조
 
-보존된 ASA Extended 목록의 default-color fallback을 제외한 63개 정규식을 `ASA_FIREWALL_OPERATIONAL_STATES` 블록으로 V2/V3에 병합했습니다. 순서는 BGP 상세 다음, GRE/DMVPN/IKE와 범용 오류·상태 블록 전입니다. 따라서 ASA와 IOS가 공유하는 `interface ...`, IPsec packet/error 출력에서는 ASA 블록의 검증된 정보색·주의색이 먼저 적용됩니다.
+보존된 ASA Extended 목록의 default-color fallback을 제외한 63개 정규식을 `ASA_FIREWALL_OPERATIONAL_STATES` 블록으로 V2/V3에 병합했습니다. 순서는 BGP 상세와 `IOS_SHOW_IP_INTERFACE_BRIEF` 보호 다음, GRE/DMVPN/IKE와 범용 오류·상태 블록 전입니다. ASA와 IOS의 brief 인터페이스 행은 같은 형식이므로 인터페이스명·주소·중립 필드·up/down은 앞선 보호 규칙이 두 플랫폼에 동일한 토큰식 색상을 적용합니다. IPsec packet/error 등 나머지 공통 출력에서는 ASA 블록의 검증된 정보색·주의색이 먼저 적용됩니다.
 
 ASA 블록은 syslog severity, 상세·요약 인터페이스, failover 역할과 동기화, ASAv 라이선스, SLA Track, AAA, reload·환경 실패, IKE/IPsec, ASA ACL/hitcnt, 기본 경로, NAT/xlate/연결, CPU·메모리, service-policy/ASP/resource drop, OSPF 및 인증서 등록 상태를 포함합니다. `TCP conn`/`UDP conn` failover 통계 오탐 방지 예외도 유지합니다. 자세한 증거 수준과 화면 검증 범위는 [ASA 강조 상태](docs/ASA-Highlighting-Status.md)를 참고하십시오.
 
-통합 검증은 `pwsh -NoProfile -File tests/AsaFirewallHighlights.Tests.ps1`로 실행합니다. 보존된 Core/Extended 구조와 62개 출력 회귀, 운영 V2/V3에 병합된 63개 규칙의 패턴·색상·순서·PCRE 문법을 함께 확인합니다.
+통합 검증은 `pwsh -NoProfile -File tests/AsaFirewallHighlights.Tests.ps1`과 `pwsh -NoProfile -File tests/InterfaceBriefHighlights.Tests.ps1`로 실행합니다. 보존된 Core/Extended 구조와 62개 출력 회귀, 운영 V2/V3에 병합된 63개 규칙의 패턴·색상·순서·PCRE 문법 및 brief 행 토큰 우선순위를 함께 확인합니다.
 
 ## 정규식 및 매칭 케이스 주의사항
 

@@ -1,0 +1,6 @@
+Interface              IP-Address      OK? Method Status                Protocol
+Ethernet0/0            10.1.12.2      YES manual up                    up
+Ethernet0/1            211.239.123.2   YES manual up                    up
+Ethernet0/2            unassigned     YES NVRAM  up                    up
+Ethernet2/0            unassigned     YES unset  administratively down down
+GigabitEthernet0/1     192.0.2.1      YES manual down                  down
